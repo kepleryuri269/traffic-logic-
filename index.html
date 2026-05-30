@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Traffic Logic</title>
+  <link rel="stylesheet" href="assets/css/menu.css" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ══════════════════════════════
+       TELA MENU
+  ══════════════════════════════ -->
+  <div id="screen-menu" class="screen active">
+    <div class="bg"></div>
+    <div id="particles" class="particles"></div>
+
+    <div class="menu-wrap">
+      <div class="logo-row">
+        <div class="semaforo">
+          <span class="s-light red"></span>
+          <span class="s-light yellow"></span>
+          <span class="s-light green"></span>
+        </div>
+        <h1 class="title">Traffic Logic</h1>
+      </div>
+      <p class="subtitle">CONTROLE O TRÂNSITO DA CIDADE</p>
+
+      <div class="dots">
+        <span class="dot red"></span>
+        <span class="dot yellow"></span>
+        <span class="dot green"></span>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-play" onclick="showScreen('screen-fases')">JOGAR</button>
+        <button class="btn btn-outline" onclick="showSobre()">SOBRE O JOGO</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       TELA FASES
+  ══════════════════════════════ -->
+  <div id="screen-fases" class="screen">
+    <div class="bg"></div>
+
+    <div class="fases-wrap">
+      <div class="fases-header">
+        <h1 class="title">Selecione o Nível</h1>
+        <p class="subtitle">Escolha seu desafio urbano</p>
+      </div>
+
+      <div class="fases-grid">
+
+        <!-- FÁCIL -->
+        <button class="card-fase facil-card" onclick="iniciarJogo(1)">
+          <div class="cf-side-bar"></div>
+          <div class="cf-icon">🟢</div>
+          <div class="cf-body">
+            <div class="cf-top">
+              <div>
+                <span class="cf-tag facil">FÁCIL</span>
+                <h3 class="cf-title">Cruzamento Básico</h3>
+              </div>
+              <span class="cf-num">01</span>
+            </div>
+            <p class="cf-desc">Gerencie um cruzamento simples com fluxo tranquilo de veículos.</p>
+            <div class="cf-stats">
+              <div class="cf-stat"><span class="cf-stat-icon">🚗</span><span>20 carros/min</span></div>
+              <div class="cf-stat"><span class="cf-stat-icon">⏱️</span><span>5 minutos</span></div>
+              <div class="cf-stat"><span class="cf-stat-icon">⭐</span><span>25 pontos</span></div>
+            </div>
+          </div>
+          <div class="cf-arrow">›</div>
+        </button>
+
+        <!-- MÉDIO -->
+        <button class="card-fase medio-card" onclick="iniciarJogo(2)">
+          <div class="cf-side-bar"></div>
+          <div class="cf-icon">🟡</div>
+          <div class="cf-body">
+            <div class="cf-top">
+              <div>
+                <span class="cf-tag medio">MÉDIO</span>
+                <h3 class="cf-title">Trânsito Moderado</h3>
+              </div>
+              <span class="cf-num">02</span>
+            </div>
+            <p class="cf-desc">O fluxo aumenta e os tempos ficam mais apertados. Atenção redobrada!</p>
+            <div class="cf-stats">
+              <div class="cf-stat"><span class="cf-stat-icon">🚗</span><span>30 carros/min</span></div>
+              <div class="cf-stat"><span class="cf-stat-icon">⏱️</span><span>7 minutos</span></div>
+              <div class="cf-stat"><span class="cf-stat-icon">⭐</span><span>25 pontos</span></div>
+            </div>
+          </div>
+          <div class="cf-arrow">›</div>
+        </button>
+
+        <!-- DIFÍCIL -->
+        <button class="card-fase dificil-card" onclick="iniciarJogo(3)">
+          <div class="cf-side-bar"></div>
+          <div class="cf-icon">🔴</div>
+          <div class="cf-body">
+            <div class="cf-top">
+              <div>
+                <span class="cf-tag dificil">DIFÍCIL</span>
+                <h3 class="cf-title">Trânsito Intenso</h3>
+              </div>
+              <span class="cf-num">03</span>
+            </div>
+            <p class="cf-desc">Caos urbano total. Carros de todos os lados sem parar. Você consegue?</p>
+            <div class="cf-stats">
+              <div class="cf-stat"><span class="cf-stat-icon">🚗</span><span>60 carros/min</span></div>
+              <div class="cf-stat"><span class="cf-stat-icon">⏱️</span><span>10 minutos</span></div>
+              <div class="cf-stat"><span class="cf-stat-icon">⭐</span><span>50 pontos</span></div>
+            </div>
+          </div>
+          <div class="cf-arrow">›</div>
+        </button>
+
+      </div>
+
+      <button class="btn btn-outline" onclick="showMenu()">← VOLTAR</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       TELA SOBRE
+  ══════════════════════════════ -->
+  <div id="screen-sobre" class="screen">
+    <div class="bg"></div>
+
+    <div class="sobre-wrap">
+      <div class="sobre-header">
+        <div class="semaforo small">
+          <span class="s-light red"></span>
+          <span class="s-light yellow"></span>
+          <span class="s-light green"></span>
+        </div>
+        <h2 class="sobre-title">Sobre o Jogo</h2>
+      </div>
+
+      <div class="sobre-body">
+        <p class="sobre-desc">
+          <strong>Traffic Logic</strong> é um jogo de estratégia e raciocínio rápido onde você assume o controle dos semáforos de uma cidade em movimento constante.
+        </p>
+
+        <div class="cards">
+          <div class="card">
+            <span class="card-icon">🚗</span>
+            <div>
+              <h3>Gerencie o Fluxo</h3>
+              <p>Carros chegam de todas as direções. Clique nos semáforos para liberar ou bloquear o trânsito.</p>
+            </div>
+          </div>
+          <div class="card">
+            <span class="card-icon">💥</span>
+            <div>
+              <h3>Evite Colisões</h3>
+              <p>Cada batida custa uma vida. Semáforos mal sincronizados causam acidentes!</p>
+            </div>
+          </div>
+          <div class="card">
+            <span class="card-icon">⭐</span>
+            <div>
+              <h3>Acumule Pontos</h3>
+              <p>Ganhe pontos por cada carro que passa com segurança pelo cruzamento.</p>
+            </div>
+          </div>
+          <div class="card">
+            <span class="card-icon">⚡</span>
+            <div>
+              <h3>Níveis Crescentes</h3>
+              <p>A cada nível o trânsito fica mais intenso e os carros mais rápidos.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="tip-box">
+          <span class="tip-icon">💡</span>
+          <p><em>Dica: Planeje com antecedência. Uma faixa parada por tempo demais causa engarrafamento — e engarrafamentos causam acidentes!</em></p>
+        </div>
+      </div>
+
+      <button class="btn btn-outline back-btn" onclick="showMenu()">← VOLTAR</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       TELA JOGO
+  ══════════════════════════════ -->
+  <div id="screen-game" class="screen">
+    <!-- mapa fica no background via style.css -->
+    <button class="btn-voltar-jogo" onclick="confirmarSairFase()">← SAIR DA FASE</button>
+  </div>
+
+  <!-- ══════════════════════════════
+       MODAL CONFIRMAÇÃO SAÍDA
+  ══════════════════════════════ -->
+  <div id="modal-sair" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-icon">⚠️</div>
+      <h2 class="modal-title">Sair da fase?</h2>
+      <p class="modal-desc">Todo o progresso desta fase será perdido. Tem certeza que quer sair?</p>
+      <div class="modal-btns">
+        <button class="btn btn-outline" onclick="fecharModal()">CONTINUAR JOGANDO</button>
+        <button class="btn btn-sair" onclick="confirmarSaida()">SIM, SAIR</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/game.js"></script>
+</body>
+</html>
