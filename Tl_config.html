@@ -5,51 +5,287 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configurações - Traffic Logic</title>
 
-    <link rel="stylesheet" href="css/configuracoes.css">
+    <link rel="stylesheet" href="configuracoes.css">
 
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;500;600&display=swap";
+  >
 </head>
-<body>
-
-    <div class="config-container">
-
-        <h1 class="titulo">CONFIGURAÇÕES</h1>
-        <p class="subtitulo">Personalize sua experiência de jogo</p>
-
-        <div class="config-box">
-
-            <div class="opcao">
-                <label>Volume da Música</label>
-                <input type="range" min="0" max="100" value="80">
-            </div>
-
-            <div class="opcao">
-                <label>Volume dos Efeitos</label>
-                <input type="range" min="0" max="100" value="70">
-            </div>
-
-            <div class="opcao">
-                <label>Dificuldade Padrão</label>
-                <select>
-                    <option>Fácil</option>
-                    <option>Médio</option>
-                    <option>Difícil</option>
-                </select>
-            </div>
-
-            <div class="opcao">
-                <label>Mostrar Dicas</label>
-                <input type="checkbox" checked>
-            </div>
-
+<body>  
+  <div class="tl-wrap">
+    <div class="cfg-inner">
+  
+      <div class="cfg-header">
+        <div class="semaforo">
+          <span class="s-light red"></span>
+          <span class="s-light yellow"></span>
+          <span class="s-light green"></span>
         </div>
-
-        <div class="botoes">
-            <button class="btn salvar">SALVAR</button>
-            <button class="btn voltar">VOLTAR</button>
+        <div class="cfg-title-block">
+          <h2>CONFIGURAÇÕES</h2>
+          <p>Traffic Logic · Painel de controle</p>
         </div>
-
+      </div>
+  
+      <!-- ÁUDIO -->
+      <div class="cfg-section">
+        <div class="section-label"><span class="section-label-dot"></span>ÁUDIO</div>
+  
+        <div class="cfg-row">
+          <div class="cfg-row-left">
+            <div class="row-name">Música de fundo</div>
+            <div class="row-desc">Trilha sonora ambiente durante as fases</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="tog-music" checked onchange="syncSlider(this,'vol-music')">
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+  
+        <div class="cfg-row">
+          <div class="cfg-row-left">
+            <div class="row-name">Volume da música</div>
+          </div>
+          <div class="cfg-slider-wrap">
+            <input type="range" class="cfg-slider" id="vol-music" min="0" max="100" value="70" step="1" oninput="updateVal(this,'val-music')">
+            <span class="slider-val" id="val-music">70%</span>
+          </div>
+        </div>
+  
+        <div class="cfg-row">
+          <div class="cfg-row-left">
+            <div class="row-name">Efeitos sonoros</div>
+            <div class="row-desc">Sons de buzina, semáforo e colisão</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="tog-sfx" checked>
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+  
+        <div class="cfg-row">
+          <div class="cfg-row-left">
+            <div class="row-name">Volume dos efeitos</div>
+          </div>
+          <div class="cfg-slider-wrap">
+            <input type="range" class="cfg-slider" id="vol-sfx" min="0" max="100" value="85" step="1" oninput="updateVal(this,'val-sfx')">
+            <span class="slider-val" id="val-sfx">85%</span>
+          </div>
+        </div>
+      </div>
+  
+      <!-- JOGABILIDADE -->
+      <div class="cfg-section">
+        <div class="section-label"><span class="section-label-dot" style="background:var(--green);box-shadow:0 0 6px var(--green)"></span>JOGABILIDADE</div>
+  
+        <div class="cfg-row">
+          <div class="cfg-row-left">
+            <div class="row-name">Velocidade dos carros</div>
+            <div class="row-desc">Afeta todos os modos de jogo</div>
+          </div>
+          <select class="cfg-select" id="sel-speed">
+            <option value="slow">Lenta</option>
+            <option value="normal" selected>Normal</option>
+            <option value="fast">Rápida</option>
+            <option value="insane">Insana</option>
+          </select>
+        </div>
+  
+        <div class="cfg-row">
+          <div class="cfg-row-left">
+            <div class="row-name">Dificuldade adaptativa <span class="tag-badge tag-new">NOVO</span></div>
+            <div class="row-desc">O jogo ajusta o fluxo conforme seu desempenho</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="tog-adaptive">
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+  
+        <div class="cfg-row">
+          <div class="cfg-row-left">
+            <div class="row-name">Mostrar temporizador</div>
+            <div class="row-desc">Exibe contagem regressiva nas fases</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="tog-timer" checked>
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+  
+        <div class="cfg-row">
+          <div class="cfg-row-left">
+            <div class="row-name">Vidas extras <span class="tag-badge tag-exp">BETA</span></div>
+            <div class="row-desc">Começa cada fase com 5 vidas (padrão: 3)</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="tog-lives">
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+      </div>
+  
+      <!-- VISUAL -->
+      <div class="cfg-section">
+        <div class="section-label"><span class="section-label-dot" style="background:var(--yellow);box-shadow:0 0 6px var(--yellow)"></span>VISUAL</div>
+  
+        <div class="cfg-row">
+          <div class="cfg-row-left">
+            <div class="row-name">Cor dos semáforos</div>
+            <div class="row-desc">Tema de destaque da interface</div>
+          </div>
+          <div class="color-row" id="color-chips">
+            <span class="color-chip active" style="background:#5b6ef5" data-color="blue" onclick="pickColor(this)"></span>
+            <span class="color-chip" style="background:#27ae60" data-color="green" onclick="pickColor(this)"></span>
+            <span class="color-chip" style="background:#e74c3c" data-color="red" onclick="pickColor(this)"></span>
+            <span class="color-chip" style="background:#f0a500" data-color="yellow" onclick="pickColor(this)"></span>
+            <span class="color-chip" style="background:#a855f7" data-color="purple" onclick="pickColor(this)"></span>
+          </div>
+        </div>
+  
+        <div class="cfg-row">
+          <div class="cfg-row-left">
+            <div class="row-name">Partículas animadas</div>
+            <div class="row-desc">Efeito de partículas no menu principal</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="tog-particles" checked>
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+  
+        <div class="cfg-row">
+          <div class="cfg-row-left">
+            <div class="row-name">Qualidade gráfica</div>
+          </div>
+          <select class="cfg-select" id="sel-quality">
+            <option value="low">Baixa</option>
+            <option value="med" selected>Média</option>
+            <option value="high">Alta</option>
+          </select>
+        </div>
+  
+        <div class="cfg-row">
+          <div class="cfg-row-left">
+            <div class="row-name">Brilho da tela</div>
+          </div>
+          <div class="cfg-slider-wrap">
+            <input type="range" class="cfg-slider" id="bri" min="50" max="100" value="80" step="1" oninput="updateVal(this,'val-bri')">
+            <span class="slider-val" id="val-bri">80%</span>
+          </div>
+        </div>
+      </div>
+  
+      <!-- ACESSIBILIDADE -->
+      <div class="cfg-section">
+        <div class="section-label"><span class="section-label-dot" style="background:var(--red);box-shadow:0 0 6px var(--red)"></span>ACESSIBILIDADE</div>
+  
+        <div class="cfg-row">
+          <div class="cfg-row-left">
+            <div class="row-name">Modo daltônico</div>
+            <div class="row-desc">Substitui cores por formas e padrões</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="tog-colorblind">
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+  
+        <div class="cfg-row">
+          <div class="cfg-row-left">
+            <div class="row-name">Tamanho do texto</div>
+          </div>
+          <select class="cfg-select" id="sel-font">
+            <option value="sm">Pequeno</option>
+            <option value="md" selected>Médio</option>
+            <option value="lg">Grande</option>
+          </select>
+        </div>
+  
+        <div class="cfg-row">
+          <div class="cfg-row-left">
+            <div class="row-name">Reduzir movimento</div>
+            <div class="row-desc">Minimiza animações e transições</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="tog-motion">
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+      </div>
+  
+      <div class="btn-row">
+        <button class="btn-cfg btn-reset" onclick="resetSettings()">↺ RESTAURAR</button>
+        <button class="btn-cfg btn-save" onclick="saveSettings()">✓ SALVAR CONFIGURAÇÕES</button>
+      </div>
+  
     </div>
-
-</body>
-</html>
+  
+    <div class="toast" id="toast"></div>
+  </div>
+  
+  <script>
+    function updateVal(slider, outId) {
+      document.getElementById(outId).textContent = slider.value + '%';
+    }
+  
+    function syncSlider(toggle, sliderId) {
+      const s = document.getElementById(sliderId);
+      if (s) s.disabled = !toggle.checked;
+    }
+  
+    function pickColor(el) {
+      document.querySelectorAll('.color-chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+    }
+  
+    function showToast(msg, color) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.background = color === 'green'
+        ? 'rgba(39,174,96,0.12)' : 'rgba(231,76,60,0.12)';
+      t.style.borderColor = color === 'green'
+        ? 'rgba(39,174,96,0.4)' : 'rgba(231,76,60,0.4)';
+      t.style.color = color === 'green' ? '#27ae60' : '#e74c3c';
+      t.style.boxShadow = color === 'green'
+        ? '0 0 20px rgba(39,174,96,0.2)' : '0 0 20px rgba(231,76,60,0.2)';
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2400);
+    }
+  
+    function saveSettings() {
+      showToast('✓  CONFIGURAÇÕES SALVAS', 'green');
+    }
+  
+    function resetSettings() {
+      document.getElementById('tog-music').checked = true;
+      document.getElementById('tog-sfx').checked = true;
+      document.getElementById('tog-adaptive').checked = false;
+      document.getElementById('tog-timer').checked = true;
+      document.getElementById('tog-lives').checked = false;
+      document.getElementById('tog-particles').checked = true;
+      document.getElementById('tog-colorblind').checked = false;
+      document.getElementById('tog-motion').checked = false;
+      document.getElementById('vol-music').value = 70;
+      document.getElementById('val-music').textContent = '70%';
+      document.getElementById('vol-sfx').value = 85;
+      document.getElementById('val-sfx').textContent = '85%';
+      document.getElementById('bri').value = 80;
+      document.getElementById('val-bri').textContent = '80%';
+      document.getElementById('sel-speed').value = 'normal';
+      document.getElementById('sel-quality').value = 'med';
+      document.getElementById('sel-font').value = 'md';
+      document.querySelectorAll('.color-chip').forEach(c => c.classList.remove('active'));
+      document.querySelector('.color-chip[data-color="blue"]').classList.add('active');
+      showToast('↺  CONFIGURAÇÕES RESTAURADAS', 'red');
+    }
+  </script>
+  <body>
+ </html>
