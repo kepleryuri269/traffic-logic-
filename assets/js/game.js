@@ -14,3 +14,16 @@ function iniciarJogo(nivel) {
   screen.style.backgroundSize = 'cover';
   screen.style.backgroundPosition = 'center';
 }
+
+function confirmarSairFase() {
+  document.getElementById('modal-sair').style.display = 'flex';
+}
+
+function fecharModal() {
+  document.getElementById('modal-sair').style.display = 'none';
+}
+
+function confirmarSaida() {
+  fecharModal();
+  showScreen('screen-fases');
+}
