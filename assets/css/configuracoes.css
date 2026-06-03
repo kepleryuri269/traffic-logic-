@@ -1,0 +1,109 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:'Rajdhani', sans-serif;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:linear-gradient(135deg,#07111f,#10253d);
+    color:white;
+}
+
+.config-container{
+    width:90%;
+    max-width:700px;
+    background:rgba(255,255,255,0.05);
+    backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:20px;
+    padding:40px;
+    box-shadow:0 0 30px rgba(0,255,255,0.15);
+}
+
+.titulo{
+    font-family:'Orbitron', sans-serif;
+    text-align:center;
+    color:#00d9ff;
+    margin-bottom:10px;
+}
+
+.subtitulo{
+    text-align:center;
+    color:#cfcfcf;
+    margin-bottom:30px;
+}
+
+.config-box{
+    display:flex;
+    flex-direction:column;
+    gap:25px;
+}
+
+.opcao{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.opcao label{
+    font-size:18px;
+    font-weight:600;
+}
+
+input[type="range"]{
+    width:100%;
+}
+
+select{
+    padding:10px;
+    border:none;
+    border-radius:8px;
+    font-size:16px;
+}
+
+input[type="checkbox"]{
+    width:20px;
+    height:20px;
+}
+
+.botoes{
+    margin-top:35px;
+    display:flex;
+    justify-content:center;
+    gap:15px;
+}
+
+.btn{
+    padding:12px 25px;
+    border:none;
+    border-radius:8px;
+    font-size:16px;
+    font-weight:bold;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+.salvar{
+    background:#00d9ff;
+    color:#000;
+}
+
+.salvar:hover{
+    transform:translateY(-2px);
+}
+
+.voltar{
+    background:transparent;
+    border:2px solid #00d9ff;
+    color:#00d9ff;
+}
+
+.voltar:hover{
+    background:#00d9ff;
+    color:#000;
+}
