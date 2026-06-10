@@ -653,3 +653,281 @@ html, body {
   opacity: 0;
   pointer-events: none;
 }
+
+/* ══════════════════════════════════════════════
+   TELA DE CONFIGURAÇÕES
+══════════════════════════════════════════════ */
+
+.config-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: min(520px, 92vw);
+  padding: 38px 36px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  backdrop-filter: blur(12px);
+  animation: riseIn 0.5s cubic-bezier(.22,1,.36,1) both;
+}
+
+.config-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.config-title {
+  font-family: var(--ff-title);
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(140,170,255,0.6);
+}
+
+/* ── Seção ── */
+.config-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.config-section-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--ff-title);
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  color: var(--text);
+  text-transform: uppercase;
+}
+
+.config-icon { font-size: 1.1rem; }
+
+/* ── Slider ── */
+.config-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.config-slider-min,
+.config-slider-max {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.cfg-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.12);
+  outline: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.cfg-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5b6ef5, #7c5bf5);
+  box-shadow: 0 0 8px rgba(91,110,245,0.7);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.cfg-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.cfg-valor {
+  font-family: var(--ff-title);
+  font-size: 0.75rem;
+  color: var(--blue);
+  min-width: 44px;
+  text-align: right;
+}
+
+/* ── Toggles acessibilidade ── */
+.config-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cfg-toggle {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cfg-toggle:hover {
+  background: rgba(91,110,245,0.08);
+  border-color: rgba(91,110,245,0.3);
+}
+
+.cfg-toggle.ativo {
+  background: rgba(91,110,245,0.1);
+  border-color: rgba(91,110,245,0.45);
+}
+
+.cfg-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cfg-toggle-icon { font-size: 1.3rem; flex-shrink: 0; }
+
+.cfg-toggle-title {
+  display: block;
+  font-family: var(--ff-title);
+  font-size: 0.7rem;
+  letter-spacing: 1.5px;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.cfg-toggle-desc {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Pill (on/off) */
+.cfg-toggle-pill {
+  width: 44px;
+  height: 24px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.1);
+  border: 1.5px solid rgba(255,255,255,0.15);
+  flex-shrink: 0;
+  position: relative;
+  transition: background 0.25s, border-color 0.25s;
+}
+
+.cfg-toggle-pill::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+  transition: transform 0.25s, background 0.25s;
+}
+
+.cfg-toggle.ativo .cfg-toggle-pill {
+  background: linear-gradient(135deg, #5b6ef5, #7c5bf5);
+  border-color: #5b6ef5;
+}
+
+.cfg-toggle.ativo .cfg-toggle-pill::after {
+  transform: translateX(20px);
+  background: #fff;
+}
+
+/* ══ Overlay de brilho ══ */
+#brilho-overlay {
+  position: fixed;
+  inset: 0;
+  background: black;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9998;
+  transition: opacity 0.3s;
+}
+
+/* ══ Alto contraste ══ */
+body.alto-contraste {
+  --dark:  #000;
+  --dark2: #000;
+  --text:  #fff;
+  --muted: #ccc;
+  --border: rgba(255,255,255,0.5);
+  --card-bg: rgba(255,255,255,0.08);
+}
+
+body.alto-contraste .bg {
+  background: #000 !important;
+}
+
+body.alto-contraste .card-fase,
+body.alto-contraste .config-section,
+body.alto-contraste .cfg-toggle,
+body.alto-contraste .card,
+body.alto-contraste .sobre-wrap,
+body.alto-contraste .config-wrap {
+  border-color: rgba(255,255,255,0.6) !important;
+  background: rgba(255,255,255,0.06) !important;
+}
+
+/* ══ Texto grande ══ */
+body.texto-grande {
+  font-size: 112%;
+}
+
+/* jogo / fases */
+body.texto-grande .cf-title        { font-size: 1.2rem; }
+body.texto-grande .cf-desc         { font-size: 0.95rem; }
+body.texto-grande .cf-stat         { font-size: 0.9rem; }
+
+/* sobre */
+body.texto-grande .sobre-desc      { font-size: 1.1rem; }
+body.texto-grande .card p          { font-size: 1rem; }
+body.texto-grande .card h3         { font-size: 0.82rem; }
+body.texto-grande .tip-box p       { font-size: 0.96rem; }
+
+/* config */
+body.texto-grande .config-title    { font-size: 1.65rem; }
+body.texto-grande .config-section-label { font-size: 0.82rem; }
+body.texto-grande .cfg-toggle-title     { font-size: 0.82rem; }
+body.texto-grande .cfg-toggle-desc      { font-size: 0.9rem; }
+body.texto-grande .cfg-valor            { font-size: 0.88rem; }
+
+/* menu */
+body.texto-grande .subtitle        { font-size: 1rem; }
+body.texto-grande .btn             { font-size: 0.95rem; }
+
+/* ══ Daltonismo — filtro SVG deuteranopia (mais comum) ══ */
+
+/* Filtro embutido invisível */
+body.daltonismo::before {
+  content: '';
+  display: none;
+}
+
+/* Aplica matriz de deuteranopia no body inteiro */
+body.daltonismo {
+  filter: url(#filtro-daltonismo);
+}
+
+/* SVG com a matriz — injetado via JS no app.js */
+#svg-daltonismo-filtro {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}

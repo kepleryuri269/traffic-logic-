@@ -43,7 +43,7 @@ document.addEventListener("click", function(e) {
 // Ao carregar a página, restaura a tela salva no hash (se houver)
 (function restoreScreen() {
   const hash = location.hash.replace("#", "");
-  const validScreens = ["screen-menu", "screen-fases", "screen-sobre", "screen-game"];
+  const validScreens = ["screen-menu", "screen-fases", "screen-sobre", "screen-config", "screen-game"];
   if (hash && validScreens.includes(hash)) {
     document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
     const target = document.getElementById(hash);
@@ -69,6 +69,95 @@ document.addEventListener("click", function(e) {
     }
   }
 })();
+
+// ══════════════════════════════════════════════
+//  CONFIGURAÇÕES
+// ══════════════════════════════════════════════
+
+// Carrega configs salvas
+(function carregarConfigs() {
+  const brilho = localStorage.getItem('cfg-brilho') ?? 100;
+  const som    = localStorage.getItem('cfg-som')    ?? 100;
+
+  document.getElementById('cfg-brilho').value = brilho;
+  document.getElementById('cfg-som').value    = som;
+  document.getElementById('val-brilho').textContent = brilho + '%';
+  document.getElementById('val-som').textContent    = som + '%';
+  aplicarBrilho(brilho);
+  aplicarSom(som);
+
+  if (localStorage.getItem('cfg-daltonismo') === '1')       ativarToggle('daltonismo',      'daltonismo');
+  if (localStorage.getItem('cfg-alto-contraste') === '1')   ativarToggle('alto-contraste',  'alto-contraste');
+  if (localStorage.getItem('cfg-texto-grande') === '1')     ativarToggle('texto-grande',    'texto-grande');
+})();
+
+function aplicarBrilho(val) {
+  const overlay = document.getElementById('brilho-overlay');
+  overlay.style.opacity = (1 - val / 100) * 0.82;
+  document.getElementById('val-brilho').textContent = val + '%';
+  localStorage.setItem('cfg-brilho', val);
+}
+
+function aplicarSom(val) {
+  document.getElementById('val-som').textContent = val + '%';
+  localStorage.setItem('cfg-som', val);
+  // Expõe volume global para game.js usar
+  window.cfgVolume = val / 100;
+  if (window.crashAudio) window.crashAudio.volume = window.cfgVolume;
+}
+
+function ativarToggle(chave, classeBody) {
+  const btn  = document.getElementById('toggle-' + chave);
+  const pill = document.getElementById('pill-' + chave);
+  if (!btn) return;
+  btn.classList.add('ativo');
+  document.body.classList.add(classeBody);
+}
+
+function desativarToggle(chave, classeBody) {
+  const btn = document.getElementById('toggle-' + chave);
+  if (!btn) return;
+  btn.classList.remove('ativo');
+  document.body.classList.remove(classeBody);
+}
+
+// Injeta o SVG com filtro de daltonismo (deuteranopia) uma única vez
+(function injetarFiltroSVG() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.id = 'svg-daltonismo-filtro';
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  svg.innerHTML = `
+    <defs>
+      <filter id="filtro-daltonismo" color-interpolation-filters="linearRGB">
+        <feColorMatrix type="matrix" values="
+          0.367  0.861 -0.228  0  0
+          0.280  0.673  0.047  0  0
+         -0.012  0.043  0.969  0  0
+          0      0      0      1  0
+        "/>
+      </filter>
+    </defs>
+  `;
+  document.body.appendChild(svg);
+})();
+
+function toggleDaltonismo() {
+  const ativo = document.getElementById('toggle-daltonismo').classList.contains('ativo');
+  if (ativo) { desativarToggle('daltonismo', 'daltonismo'); localStorage.setItem('cfg-daltonismo', '0'); }
+  else       { ativarToggle('daltonismo',    'daltonismo'); localStorage.setItem('cfg-daltonismo', '1'); }
+}
+
+function toggleAltoContraste() {
+  const ativo = document.getElementById('toggle-alto-contraste').classList.contains('ativo');
+  if (ativo) { desativarToggle('alto-contraste', 'alto-contraste');   localStorage.setItem('cfg-alto-contraste', '0'); }
+  else       { ativarToggle('alto-contraste', 'alto-contraste');      localStorage.setItem('cfg-alto-contraste', '1'); }
+}
+
+function toggleTextoGrande() {
+  const ativo = document.getElementById('toggle-texto-grande').classList.contains('ativo');
+  if (ativo) { desativarToggle('texto-grande', 'texto-grande');       localStorage.setItem('cfg-texto-grande', '0'); }
+  else       { ativarToggle('texto-grande', 'texto-grande');          localStorage.setItem('cfg-texto-grande', '1'); }
+}
 
 (function spawnParticles() {
   const container = document.getElementById("particles");
