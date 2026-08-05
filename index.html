@@ -6,6 +6,7 @@
   <title>Traffic Logic</title>
   <link rel="stylesheet" href="assets/css/menu.css" />
   <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="assets/css/tutorial.css" />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet" />
 </head>
 <body>
@@ -57,7 +58,7 @@
       <div class="fases-grid">
 
         <!-- FÁCIL -->
-        <button class="card-fase facil-card" onclick="iniciarJogo(1)">
+        <button class="card-fase facil-card" onclick="perguntarTutorial(1)">
           <div class="cf-side-bar"></div>
           <div class="cf-icon">🟢</div>
           <div class="cf-body">
@@ -283,6 +284,151 @@
   </div>
 
   <!-- ══════════════════════════════
+       TELA TUTORIAL
+  ══════════════════════════════ -->
+  <div id="screen-tutorial" class="screen">
+    <div class="bg"></div>
+
+    <div class="tutorial-wrap">
+      <button class="tutorial-skip" onclick="pularTutorial()">PULAR ✕</button>
+
+      <div class="tutorial-dots">
+        <span class="t-dot" data-step="0"></span>
+        <span class="t-dot" data-step="1"></span>
+        <span class="t-dot" data-step="2"></span>
+        <span class="t-dot" data-step="3"></span>
+      </div>
+
+      <div class="tutorial-exemplo-tag">📍 Exemplo baseado na <strong>Fase 1 — Cruzamento Básico</strong></div>
+
+      <div class="tutorial-slides" id="tutorial-slides">
+
+        <!-- PASSO 1 — OBJETIVO -->
+        <div class="t-slide" data-step="0">
+          <span class="t-step-tag">Passo 1 de 4</span>
+          <h2 class="t-title">Qual é o objetivo?</h2>
+          <p class="t-desc">Faça os carros atravessarem o cruzamento <strong>com segurança</strong> até atingir a meta de veículos da fase, antes que o tempo acabe.</p>
+          <div class="t-visual">
+            <div class="t-map">
+              <div class="t-block nw">🏢</div>
+              <div class="t-block ne">🏬</div>
+              <div class="t-block sw">🏠</div>
+              <div class="t-block se">🏢</div>
+
+              <div class="t-road t-road-h"></div>
+              <div class="t-road t-road-v"></div>
+              <div class="t-crosswalk"></div>
+
+              <span class="t-mini-light light-n"></span>
+              <span class="t-mini-light light-s"></span>
+              <span class="t-mini-light light-e"></span>
+              <span class="t-mini-light light-w"></span>
+
+              <div class="t-car c-e">🚗</div>
+              <div class="t-car c-w">🚕</div>
+              <div class="t-car c-s">🚙</div>
+              <div class="t-car c-n">🚌</div>
+            </div>
+          </div>
+          <div class="t-flag">🏁 Meta da Fase 1: 30 carros</div>
+        </div>
+
+        <!-- PASSO 2 — COMO CONTROLAR -->
+        <div class="t-slide" data-step="1">
+          <span class="t-step-tag">Passo 2 de 4</span>
+          <h2 class="t-title">Como controlar os semáforos</h2>
+          <p class="t-desc">Clique em um semáforo para deixar aquela via <strong>verde</strong>. A via cruzada fecha (<strong>vermelho</strong>) automaticamente.</p>
+          <div class="t-visual">
+            <div class="t-sem-demo">
+              <div class="t-sem-target">
+                <div class="t-sem-box via-a">
+                  <span class="t-sem-lamp top"></span>
+                  <span class="t-sem-lamp bottom"></span>
+                </div>
+                <div class="t-cursor">👆</div>
+              </div>
+              <span class="t-sem-vs">×</span>
+              <div class="t-sem-box via-b">
+                <span class="t-sem-lamp top"></span>
+                <span class="t-sem-lamp bottom"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASSO 3 — RISCOS -->
+        <div class="t-slide" data-step="2">
+          <span class="t-step-tag">Passo 3 de 4</span>
+          <h2 class="t-title">O que pode dar errado</h2>
+          <p class="t-desc">Fique atento a dois perigos durante a fase:</p>
+          <div class="t-visual">
+            <div class="t-riscos">
+              <div class="t-risco-card">
+                <span class="t-risco-icon">💥</span>
+                <span class="t-risco-title">COLISÃO</span>
+                <span class="t-risco-sub">Duas vias verdes ao mesmo tempo podem causar batida.</span>
+                <span class="t-risco-tag">FIM DE JOGO</span>
+              </div>
+              <div class="t-risco-card congest">
+                <span class="t-risco-icon">🚦</span>
+                <span class="t-risco-title">CONGESTIONAMENTO</span>
+                <span class="t-risco-sub">3+ carros parados na mesma via geram fila.</span>
+                <span class="t-risco-tag">-30 SEGUNDOS</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASSO 4 — HUD + PONTUAÇÃO -->
+        <div class="t-slide" data-step="3">
+          <span class="t-step-tag">Passo 4 de 4</span>
+          <h2 class="t-title">Placar e pontuação</h2>
+          <p class="t-desc">No topo da tela você acompanha o <strong>tempo restante</strong>, os <strong>carros que já passaram</strong> e a <strong>fase atual</strong>.</p>
+          <div class="t-visual t-visual-hud">
+            <div class="t-hud-demo">
+              <div class="t-hud-item tempo">
+                <span class="lbl">TEMPO</span>
+                <span class="val">04:52</span>
+              </div>
+              <div class="t-hud-item">
+                <span class="lbl">CARROS</span>
+                <span class="val">12/30</span>
+              </div>
+              <div class="t-hud-item">
+                <span class="lbl">FASE</span>
+                <span class="val">1</span>
+              </div>
+            </div>
+
+            <p class="t-desc t-desc-small">Ao bater a meta, sua pontuação depende de <strong>quão rápido</strong> você concluiu a fase:</p>
+
+            <div class="t-score-tiers">
+              <div class="t-score-card fast">
+                <span class="t-score-icon">🚀</span>
+                <span class="t-score-title">Até 3 minutos</span>
+                <span class="t-score-pts">+25 pontos</span>
+                <span class="t-score-stars">⭐⭐⭐</span>
+              </div>
+              <div class="t-score-card slow">
+                <span class="t-score-icon">⏱️</span>
+                <span class="t-score-title">Mais de 3 minutos</span>
+                <span class="t-score-pts">+15 pontos</span>
+                <span class="t-score-stars">⭐</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="tutorial-nav">
+        <button class="btn btn-outline" id="t-btn-prev" onclick="tutorialPrev()">‹ VOLTAR</button>
+        <button class="btn btn-play" id="t-btn-next" onclick="tutorialNext()">PRÓXIMO ›</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
        TELA JOGO
   ══════════════════════════════ -->
   <div id="screen-game" class="screen">
@@ -305,9 +451,25 @@
     </div>
   </div>
 
+  <!-- ══════════════════════════════
+       MODAL PERGUNTA TUTORIAL
+  ══════════════════════════════ -->
+  <div id="modal-tutorial" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-icon">📘</div>
+      <h2 class="modal-title">Ver um tutorial rápido?</h2>
+      <p class="modal-desc">Antes de começar, quer ver uma explicação rápida animada de como jogar?</p>
+      <div class="modal-btns">
+        <button class="btn btn-outline" onclick="recusarTutorial()">NÃO, JOGAR DIRETO</button>
+        <button class="btn btn-play" onclick="aceitarTutorial()">SIM, VER TUTORIAL</button>
+      </div>
+    </div>
+  </div>
+
   <div id="brilho-overlay"></div>
 
   <script src="assets/js/app.js"></script>
+  <script src="assets/js/tutorial.js"></script>
   <script src="assets/js/game.js"></script>
 </body>
 </html>
