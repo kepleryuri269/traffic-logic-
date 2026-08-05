@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Calibrador — Traffic Logic</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0d1117; color: #e6edf3; font-family: monospace; display: flex; height: 100vh; overflow: hidden; }
+
+    #painel {
+      width: 300px; flex-shrink: 0;
+      background: #161b22; border-right: 1px solid #30363d;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* Abas */
+    .tabs { display: flex; border-bottom: 1px solid #30363d; }
+    .tab {
+      flex: 1; padding: 12px; text-align: center; cursor: pointer;
+      font-size: 0.78rem; font-weight: bold; letter-spacing: 1px;
+      color: #8b949e; border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .tab.ativo { color: #58a6ff; border-bottom-color: #58a6ff; background: rgba(88,166,255,0.05); }
+
+    .tab-content { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+    .tab-content.ativo { display: flex; }
+
+    /* Botões de rota/semáforo */
+    #controles, #controles-sem { padding: 10px; border-bottom: 1px solid #30363d; display: flex; flex-direction: column; gap: 6px; }
+
+    .item-btn {
+      padding: 9px 12px; border-radius: 8px; border: 2px solid transparent;
+      cursor: pointer; font-family: monospace; font-size: 0.8rem; font-weight: bold;
+      letter-spacing: 1px; transition: all 0.15s; text-align: left;
+    }
+    .item-btn small { font-weight: normal; opacity: 0.65; display: block; font-size: 0.7rem; margin-top: 2px; }
+    .item-btn.ativo { opacity: 1 !important; transform: scale(1.02); }
+    .item-btn:not(.ativo) { opacity: 0.45; }
+
+    .btn-EAST   { background: rgba(0,255,136,0.08);  border-color: #00ff88; color: #00ff88; }
+    .btn-WEST   { background: rgba(255,68,102,0.08); border-color: #ff4466; color: #ff4466; }
+    .btn-SOUTH  { background: rgba(68,170,255,0.08); border-color: #44aaff; color: #44aaff; }
+    .btn-NORTH  { background: rgba(255,204,0,0.08);  border-color: #ffcc00; color: #ffcc00; }
+    .btn-SEM    { background: rgba(255,180,0,0.08);  border-color: #ffb400; color: #ffb400; }
+    .btn-SEM.ativo { border-color: #ffb400; }
+
+    #instrucao, #instrucao-sem {
+      padding: 10px 14px; font-size: 0.74rem; color: #8b949e;
+      line-height: 1.6; border-bottom: 1px solid #30363d;
+    }
+    #instrucao strong, #instrucao-sem strong { color: #e6edf3; }
+
+    #pontos-lista, #sem-lista { flex: 1; overflow-y: auto; padding: 10px; }
+
+    .ponto-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 5px 9px; margin-bottom: 4px;
+      background: #0d1117; border-radius: 6px; font-size: 0.78rem;
+    }
+    .ponto-item .coord { color: #79c0ff; }
+    .ponto-item .del { background: none; border: none; color: #f85149; cursor: pointer; font-size: 1rem; padding: 0 4px; }
+
+    .sem-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 10px; margin-bottom: 5px;
+      background: #0d1117; border-radius: 8px; font-size: 0.78rem;
+      border: 1px solid #21262d;
+    }
+    .sem-item .sem-label { color: #ffb400; font-weight: bold; }
+    .sem-item .sem-coord { color: #79c0ff; font-size: 0.72rem; margin-top: 2px; }
+    .sem-item .del { background: none; border: none; color: #f85149; cursor: pointer; font-size: 1rem; padding: 0 4px; }
+
+    #acoes, #acoes-sem {
+      padding: 10px; display: flex; flex-direction: column; gap: 7px;
+      border-top: 1px solid #30363d;
+    }
+    .btn-acao {
+      padding: 9px; border-radius: 8px; border: none; cursor: pointer;
+      font-family: monospace; font-size: 0.8rem; font-weight: bold; letter-spacing: 0.5px;
+    }
+    .btn-gerar   { background: #238636; color: #fff; }
+    .btn-limpar  { background: #21262d; color: #f85149; border: 1px solid #f85149; }
+    .btn-acao:hover { filter: brightness(1.2); }
+
+    /* Mapa */
+    #mapa-area { flex: 1; position: relative; overflow: auto; background: #000; }
+    #mapa-container { position: relative; display: inline-block; cursor: crosshair; }
+    #mapa-img { display: block; max-none: none; }
+    #overlay { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+    /* Modal output */
+    #output-modal {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.82); z-index: 999;
+      align-items: center; justify-content: center;
+    }
+    #output-modal.vis { display: flex; }
+    #output-box {
+      background: #161b22; border: 1px solid #30363d; border-radius: 12px;
+      padding: 22px; width: min(900px, 95vw); max-height: 82vh;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    #output-box h2 { color: #58a6ff; font-size: 0.92rem; }
+    #output-code {
+      flex: 1; overflow-y: auto; background: #0d1117; border: 1px solid #30363d;
+      border-radius: 8px; padding: 14px; font-size: 0.8rem; line-height: 1.6;
+      color: #e6edf3; white-space: pre;
+    }
+    #output-btns { display: flex; gap: 8px; }
+    .btn-copiar { background: #1f6feb; color: #fff; border: none; border-radius: 8px; padding: 9px 18px; cursor: pointer; font-family: monospace; font-weight: bold; }
+    .btn-fechar { background: #21262d; color: #e6edf3; border: 1px solid #30363d; border-radius: 8px; padding: 9px 18px; cursor: pointer; font-family: monospace; }
+
+    /* Cursor de semáforo */
+    #mapa-container.modo-sem { cursor: cell; }
+  </style>
+</head>
+<body>
+
+<div id="painel">
+  <h1 style="padding:12px 14px;font-size:0.85rem;color:#58a6ff;border-bottom:1px solid #30363d;letter-spacing:1px;">🗺️ CALIBRADOR — Traffic Logic</h1>
+
+  <!-- Abas -->
+  <div class="tabs">
+    <div class="tab ativo" onclick="mudarAba('rotas')">🚗 ROTAS</div>
+    <div class="tab"       onclick="mudarAba('semaforos')">🚦 SEMÁFOROS</div>
+  </div>
+
+  <!-- ABA ROTAS -->
+  <div class="tab-content ativo" id="aba-rotas">
+    <div id="controles">
+      <p style="font-size:0.7rem;color:#8b949e;margin-bottom:2px;">Selecione a rota e clique no mapa:</p>
+      <button class="item-btn btn-EAST  ativo" onclick="selecionarRota('EAST') ">→ EAST  <small>esq → dir</small></button>
+      <button class="item-btn btn-WEST"        onclick="selecionarRota('WEST') ">← WEST  <small>dir → esq</small></button>
+      <button class="item-btn btn-SOUTH"       onclick="selecionarRota('SOUTH')">↓ SOUTH <small>cima → baixo</small></button>
+      <button class="item-btn btn-NORTH"       onclick="selecionarRota('NORTH')">↑ NORTH <small>baixo → cima</small></button>
+    </div>
+    <div id="instrucao">
+      <strong>Como usar:</strong><br>
+      1. Selecione a rota<br>
+      2. Clique na faixa — mín. <strong>2 pontos</strong><br>
+      3. Repita para as 4 rotas<br>
+      4. Clique <strong>Gerar Código</strong>
+    </div>
+    <div id="pontos-lista"></div>
+    <div id="acoes">
+      <button class="btn-acao btn-gerar"  onclick="gerarCodigoRotas()">⚡ GERAR ROTAS</button>
+      <button class="btn-acao btn-limpar" onclick="limparRota()">🗑 LIMPAR ROTA ATUAL</button>
+    </div>
+  </div>
+
+  <!-- ABA SEMÁFOROS -->
+  <div class="tab-content" id="aba-semaforos">
+    <div id="controles-sem">
+      <p style="font-size:0.7rem;color:#8b949e;margin-bottom:2px;">Selecione o semáforo e clique no mapa:</p>
+      <button class="item-btn btn-SOUTH ativo" onclick="selecionarSem('SOUTH','1')">↓ SOUTH — Grupo 1 <small>entrada de cima</small></button>
+      <button class="item-btn btn-NORTH"       onclick="selecionarSem('NORTH','1')">↑ NORTH — Grupo 1 <small>entrada de baixo</small></button>
+      <button class="item-btn btn-EAST"        onclick="selecionarSem('EAST', '2')">→ EAST  — Grupo 2 <small>entrada da esquerda</small></button>
+      <button class="item-btn btn-WEST"        onclick="selecionarSem('WEST', '2')">← WEST  — Grupo 2 <small>entrada da direita</small></button>
+    </div>
+    <div id="instrucao-sem">
+      <strong>Como usar:</strong><br>
+      1. Selecione o semáforo<br>
+      2. Clique <strong>1 vez</strong> no local exato<br>
+      3. Repita para os 4 semáforos<br>
+      4. Clique <strong>Gerar Código</strong>
+    </div>
+    <div id="sem-lista"></div>
+    <div id="acoes-sem">
+      <button class="btn-acao btn-gerar"  onclick="gerarCodigoSem()">⚡ GERAR SEMÁFOROS</button>
+      <button class="btn-acao btn-limpar" onclick="limparSem()">🗑 LIMPAR SELECIONADO</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mapa -->
+<div id="mapa-area">
+  <div id="mapa-container">
+    <img id="mapa-img" src="assets/img/mapas/mapa1.png" alt="mapa"/>
+    <canvas id="overlay"></canvas>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="output-modal">
+  <div id="output-box">
+    <h2 id="output-titulo">📋 Código gerado</h2>
+    <pre id="output-code"></pre>
+    <div id="output-btns">
+      <button class="btn-copiar" onclick="copiarCodigo()">📋 COPIAR</button>
+      <button class="btn-fechar" onclick="fecharModal()">FECHAR</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Estado ──────────────────────────────────
+const CORES_ROTA = { EAST:'#00ff88', WEST:'#ff4466', SOUTH:'#44aaff', NORTH:'#ffcc00' };
+const ROTAS  = { EAST:[], WEST:[], SOUTH:[], NORTH:[] };
+const SEMS   = { SOUTH: null, NORTH: null, EAST: null, WEST: null };
+const SEM_GRUPOS = { SOUTH:'1', NORTH:'1', EAST:'2', WEST:'2' };
+
+let rotaAtiva = 'EAST';
+let semAtivo  = 'SOUTH';
+let abaAtiva  = 'rotas';
+
+const mapaImg   = document.getElementById('mapa-img');
+const overlay   = document.getElementById('overlay');
+const ctx       = overlay.getContext('2d');
+const container = document.getElementById('mapa-container');
+
+// ── Canvas ───────────────────────────────────
+mapaImg.onload = () => {
+  overlay.width  = mapaImg.naturalWidth;
+  overlay.height = mapaImg.naturalHeight;
+  overlay.style.width  = mapaImg.offsetWidth  + 'px';
+  overlay.style.height = mapaImg.offsetHeight + 'px';
+  redesenhar();
+};
+if (mapaImg.complete) {
+  overlay.width  = mapaImg.naturalWidth;
+  overlay.height = mapaImg.naturalHeight;
+}
+window.addEventListener('resize', () => {
+  overlay.style.width  = mapaImg.offsetWidth  + 'px';
+  overlay.style.height = mapaImg.offsetHeight + 'px';
+});
+
+// ── Clique no mapa ───────────────────────────
+container.addEventListener('click', e => {
+  const rect   = mapaImg.getBoundingClientRect();
+  const scaleX = mapaImg.naturalWidth  / mapaImg.offsetWidth;
+  const scaleY = mapaImg.naturalHeight / mapaImg.offsetHeight;
+  const x = Math.round((e.clientX - rect.left)  * scaleX);
+  const y = Math.round((e.clientY - rect.top)   * scaleY);
+
+  if (abaAtiva === 'rotas') {
+    ROTAS[rotaAtiva].push({ x, y });
+    atualizarListaRotas();
+  } else {
+    SEMS[semAtivo] = { x, y };
+    atualizarListaSems();
+  }
+  redesenhar();
+});
+
+// ── Abas ─────────────────────────────────────
+function mudarAba(aba) {
+  abaAtiva = aba;
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('ativo', (i===0&&aba==='rotas')||(i===1&&aba==='semaforos')));
+  document.getElementById('aba-rotas').classList.toggle('ativo', aba==='rotas');
+  document.getElementById('aba-semaforos').classList.toggle('ativo', aba==='semaforos');
+  container.classList.toggle('modo-sem', aba==='semaforos');
+  redesenhar();
+}
+
+// ── Rotas ─────────────────────────────────────
+function selecionarRota(r) {
+  rotaAtiva = r;
+  document.querySelectorAll('#controles .item-btn').forEach(b => b.classList.remove('ativo'));
+  document.querySelector('.btn-' + r).classList.add('ativo');
+  atualizarListaRotas();
+}
+
+function atualizarListaRotas() {
+  const lista = document.getElementById('pontos-lista');
+  const pts   = ROTAS[rotaAtiva];
+  if (!pts.length) { lista.innerHTML = `<p style="color:#8b949e;font-size:0.74rem;padding:8px">Nenhum ponto para ${rotaAtiva}</p>`; return; }
+  lista.innerHTML = pts.map((p,i) => `
+    <div class="ponto-item">
+      <span style="color:${CORES_ROTA[rotaAtiva]}">WP${i}</span>
+      <span class="coord">x:${p.x} y:${p.y}</span>
+      <button class="del" onclick="removerPonto(${i})">✕</button>
+    </div>`).join('');
+}
+
+function removerPonto(i) { ROTAS[rotaAtiva].splice(i,1); atualizarListaRotas(); redesenhar(); }
+function limparRota()     { ROTAS[rotaAtiva]=[]; atualizarListaRotas(); redesenhar(); }
+
+// ── Semáforos ─────────────────────────────────
+function selecionarSem(dir, grupo) {
+  semAtivo = dir;
+  document.querySelectorAll('#controles-sem .item-btn').forEach(b => b.classList.remove('ativo'));
+  event.currentTarget.classList.add('ativo');
+  atualizarListaSems();
+}
+
+function atualizarListaSems() {
+  const lista = document.getElementById('sem-lista');
+  const entradas = Object.entries(SEMS);
+  if (entradas.every(([,v]) => !v)) {
+    lista.innerHTML = `<p style="color:#8b949e;font-size:0.74rem;padding:8px">Nenhum semáforo posicionado ainda</p>`;
+    return;
+  }
+  lista.innerHTML = entradas.map(([dir, pos]) => pos ? `
+    <div class="sem-item">
+      <div>
+        <div class="sem-label">SEM_${dir} (G${SEM_GRUPOS[dir]})</div>
+        <div class="sem-coord">x:${pos.x} y:${pos.y}</div>
+      </div>
+      <button class="del" onclick="removerSem('${dir}')">✕</button>
+    </div>` : '').join('');
+}
+
+function removerSem(dir) { SEMS[dir]=null; atualizarListaSems(); redesenhar(); }
+function limparSem()      { SEMS[semAtivo]=null; atualizarListaSems(); redesenhar(); }
+
+// ── Redesenhar ────────────────────────────────
+function redesenhar() {
+  ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+  // Rotas
+  Object.entries(ROTAS).forEach(([dir, pts]) => {
+    if (!pts.length) return;
+    const cor = CORES_ROTA[dir];
+    ctx.strokeStyle = cor; ctx.lineWidth = 3; ctx.setLineDash([10,6]);
+    ctx.beginPath();
+    pts.forEach((p,i) => i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+    ctx.stroke(); ctx.setLineDash([]);
+    pts.forEach((p,i) => {
+      ctx.beginPath(); ctx.arc(p.x,p.y,8,0,Math.PI*2);
+      ctx.fillStyle=cor; ctx.fill();
+      ctx.fillStyle='#000'; ctx.font='bold 11px monospace';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(i,p.x,p.y);
+    });
+    if (pts[0]) {
+      ctx.fillStyle=cor; ctx.font='bold 13px monospace';
+      ctx.textAlign='left'; ctx.textBaseline='top';
+      ctx.fillText(dir, pts[0].x+12, pts[0].y-20);
+    }
+  });
+
+  // Semáforos
+  Object.entries(SEMS).forEach(([dir, pos]) => {
+    if (!pos) return;
+    const cor = '#ffb400';
+    // Círculo externo
+    ctx.beginPath(); ctx.arc(pos.x, pos.y, 16, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,180,0,0.2)'; ctx.fill();
+    ctx.strokeStyle = cor; ctx.lineWidth = 2.5; ctx.stroke();
+    // Ícone 🚦 simulado: 3 bolinhas
+    [0,1,2].forEach(i => {
+      ctx.beginPath(); ctx.arc(pos.x, pos.y - 10 + i*10, 3, 0, Math.PI*2);
+      ctx.fillStyle = i===0?'#e74c3c':i===1?'#f0a500':'#27ae60'; ctx.fill();
+    });
+    // Label
+    ctx.fillStyle = cor; ctx.font = 'bold 12px monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(`SEM_${dir}`, pos.x, pos.y + 20);
+    ctx.fillStyle = 'rgba(255,180,0,0.7)'; ctx.font = '10px monospace';
+    ctx.fillText(`G${SEM_GRUPOS[dir]}`, pos.x, pos.y + 33);
+  });
+}
+
+// ── Gerar código ──────────────────────────────
+function gerarCodigoRotas() {
+  const vazias = Object.entries(ROTAS).filter(([,pts]) => pts.length < 2).map(([d]) => d);
+  if (vazias.length) { alert(`Precisam de ≥2 pontos:\n${vazias.join(', ')}`); return; }
+
+  const labels = { EAST:'→ Oeste para Leste', WEST:'← Leste para Oeste', SOUTH:'↓ Norte para Sul', NORTH:'↑ Sul para Norte' };
+  const linhas = ['const ROTAS_MAPA = {', '  1: ['];
+  Object.entries(ROTAS).forEach(([dir,pts],idx,arr) => {
+    linhas.push(`    // ${labels[dir]}`);
+    linhas.push(`    { direcao: '${dir}', waypoints: [`);
+    pts.forEach((p,i) => linhas.push(`      { x: ${p.x}, y: ${p.y} }${i<pts.length-1?',':''}`));
+    linhas.push(`    ] }${idx<arr.length-1?',':''}`);
+  });
+  linhas.push('  ]', '};');
+
+  document.getElementById('output-titulo').textContent = '📋 Cole no game.js — substitui ROTAS_MAPA';
+  document.getElementById('output-code').textContent = linhas.join('\n');
+  document.getElementById('output-modal').classList.add('vis');
+}
+
+function gerarCodigoSem() {
+  const faltando = Object.entries(SEMS).filter(([,v]) => !v).map(([d]) => d);
+  if (faltando.length) { alert(`Faltam posições para:\n${faltando.join(', ')}`); return; }
+
+  const estadoInicial = { SOUTH:'green', NORTH:'green', EAST:'red', WEST:'red' };
+  const linhas = ['const SEMAFOROS_MAPA = {', '  1: ['];
+  Object.entries(SEMS).forEach(([dir,pos],idx,arr) => {
+    const virgula = idx < arr.length-1 ? ',' : '';
+    linhas.push(`    { id: 'SEM_${dir}', controla: '${dir}', grupo: ${SEM_GRUPOS[dir]}, x: ${pos.x}, y: ${pos.y}, estado: '${estadoInicial[dir]}' }${virgula}`);
+  });
+  linhas.push('  ]', '};');
+
+  document.getElementById('output-titulo').textContent = '📋 Cole no game.js — substitui SEMAFOROS_MAPA';
+  document.getElementById('output-code').textContent = linhas.join('\n');
+  document.getElementById('output-modal').classList.add('vis');
+}
+
+function copiarCodigo() {
+  navigator.clipboard.writeText(document.getElementById('output-code').textContent).then(() => {
+    const btn = document.querySelector('.btn-copiar');
+    btn.textContent = '✅ COPIADO!';
+    setTimeout(() => btn.textContent = '📋 COPIAR', 2000);
+  });
+}
+function fecharModal() { document.getElementById('output-modal').classList.remove('vis'); }
+</script>
+</body>
+</html>

@@ -315,7 +315,7 @@ function atualizarCarros(dt) {
   const scaleX = gameCanvas.width  / BASE_W;
   const scaleY = gameCanvas.height / BASE_H;
   const STOP_DIST  = 50 * Math.min(scaleX, scaleY);
-  const DIST_FILA  = 90; // distância mínima entre carros da mesma via
+  const DIST_FILA  = 65; // distância mínima entre carros da mesma via (reduzida para ficarem mais próximos)
 
   carros.forEach(carro => {
     if (!carro.ativo) return;
@@ -343,28 +343,34 @@ function atualizarCarros(dt) {
       carro.parado = false;
     }
 
-    // ── 2. Respeitar distância de carros à frente na mesma via ──
+    // ── 2. Respeitar distância mínima do carro à frente na mesma via ──
+    // (baseado na distância real, não apenas em outro.parado, para que a
+    // fila nunca "coma" o carro da frente mesmo com 3+ carros acumulados)
+    let distCarroFrente = Infinity;
     for (const outro of carros) {
       if (outro === carro || !outro.ativo || outro.direcao !== carro.direcao) continue;
 
       const dx   = outro.x - carro.x;
       const dy   = outro.y - carro.y;
       const dist = Math.sqrt(dx*dx + dy*dy);
-      if (dist < DIST_FILA && dist > 1) {
-        // Verifica se "outro" está à frente (mais avançado na rota)
-        // usando produto escalar com a direção de movimento do carro atual
-        const alvoAtual = carro.waypoints[carro.wpIndex];
-        if (!alvoAtual) continue;
-        const dirX = alvoAtual.x - carro.x;
-        const dirY = alvoAtual.y - carro.y;
-        const dot  = dx * dirX + dy * dirY;
-        // Só bloqueia se o outro está À FRENTE na direção de movimento
-        // E se o outro está parado ou muito lento (também parado)
-        if (dot > 0 && outro.parado) {
-          carro.parado = true;
-          break;
-        }
+      if (dist <= 1) continue;
+
+      // Verifica se "outro" está à frente (mais avançado na rota)
+      // usando produto escalar com a direção de movimento do carro atual
+      const alvoAtual = carro.waypoints[carro.wpIndex];
+      if (!alvoAtual) continue;
+      const dirX = alvoAtual.x - carro.x;
+      const dirY = alvoAtual.y - carro.y;
+      const dot  = dx * dirX + dy * dirY;
+
+      // Guarda sempre a MENOR distância entre os carros à frente
+      if (dot > 0 && dist < distCarroFrente) {
+        distCarroFrente = dist;
       }
+    }
+
+    if (distCarroFrente <= DIST_FILA) {
+      carro.parado = true;
     }
 
     if (carro.parado) return;
@@ -376,7 +382,17 @@ function atualizarCarros(dt) {
     const dx    = alvo.x - carro.x;
     const dy    = alvo.y - carro.y;
     const dist  = Math.sqrt(dx*dx + dy*dy);
-    const passo = carro.velocidade * dt;
+    let passo = carro.velocidade * dt;
+
+    // Nunca avança mais do que o necessário para manter a distância
+    // mínima do carro da frente — evita "pular" para dentro dele em
+    // frames de passo maior (ex: fila toda liberando no sinal verde)
+    if (distCarroFrente !== Infinity) {
+      const passoMax = distCarroFrente - DIST_FILA;
+      passo = Math.min(passo, Math.max(0, passoMax));
+    }
+
+    if (passo <= 0) return;
 
     if (dist <= passo) {
       carro.x = alvo.x;

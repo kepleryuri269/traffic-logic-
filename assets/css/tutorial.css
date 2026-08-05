@@ -1,0 +1,489 @@
+/* ══════════════════════════════════════════════
+   TUTORIAL ANIMADO — Traffic Logic
+══════════════════════════════════════════════ */
+
+.tutorial-wrap {
+    position: relative;
+    z-index: 2;
+    max-width: 560px;
+    width: 90%;
+    margin: 0 auto;
+    padding: 32px 28px 28px;
+    background: linear-gradient(180deg, rgba(14,20,40,0.92), rgba(8,13,28,0.96));
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .tutorial-skip {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--ff-body);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 1px;
+    padding: 6px 12px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .tutorial-skip:hover {
+    color: var(--text);
+    border-color: var(--text);
+  }
+  
+  /* ── Dots de progresso ── */
+  .tutorial-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .t-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    transition: all 0.25s ease;
+  }
+  .t-dot.active {
+    background: var(--blue);
+    width: 22px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px var(--blue);
+  }
+  .t-dot.done {
+    background: var(--green);
+  }
+  
+  .tutorial-exemplo-tag {
+    align-self: center;
+    font-family: var(--ff-body);
+    font-size: 12px;
+    color: var(--muted);
+    background: rgba(91,110,245,0.08);
+    border: 1px solid rgba(91,110,245,0.25);
+    padding: 5px 14px;
+    border-radius: 50px;
+  }
+  .tutorial-exemplo-tag strong {
+    color: var(--text);
+  }
+  
+  /* ── Slides ── */
+  .tutorial-slides {
+    position: relative;
+    min-height: 400px;
+  }
+  .t-slide {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+    animation: tSlideIn 0.35s ease;
+  }
+  .t-slide.active { display: flex; }
+  
+  @keyframes tSlideIn {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  
+  .t-step-tag {
+    font-family: var(--ff-title);
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--blue);
+    text-transform: uppercase;
+  }
+  .t-title {
+    font-family: var(--ff-title);
+    font-size: 22px;
+    color: var(--text);
+    margin: 0;
+  }
+  .t-desc {
+    font-family: var(--ff-body);
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 0;
+    max-width: 420px;
+  }
+  .t-desc strong { color: var(--text); }
+  
+  /* ── Área visual (animações) ── */
+  .t-visual {
+    position: relative;
+    width: 100%;
+    height: 176px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* ---- Slide 1: Objetivo — mini-mapa estilo jogo ---- */
+  .t-map {
+    position: relative;
+    width: 260px;
+    height: 168px;
+    background: radial-gradient(ellipse at center, #171d30 0%, #0b0f1d 75%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: inset 0 0 26px rgba(0,0,0,0.55);
+  }
+  
+  /* Quarteirões / prédios nos cantos, só pra dar clima de cidade */
+  .t-block {
+    position: absolute;
+    width: 78px;
+    height: 58px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    opacity: 0.55;
+  }
+  .t-block.nw { top: 7px;    left: 7px; }
+  .t-block.ne { top: 7px;    right: 7px; }
+  .t-block.sw { bottom: 7px; left: 7px; }
+  .t-block.se { bottom: 7px; right: 7px; }
+  
+  /* Pistas de asfalto */
+  .t-road {
+    position: absolute;
+    background: linear-gradient(180deg, #333a4d, #1d222e);
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.6);
+  }
+  .t-road-h { top: 50%; left: 0; width: 100%; height: 46px; transform: translateY(-50%); }
+  .t-road-v { left: 50%; top: 0; height: 100%; width: 46px; transform: translateX(-50%); }
+  
+  .t-road-h::after {
+    content: "";
+    position: absolute;
+    top: 50%; left: 0; width: 100%; height: 2px;
+    transform: translateY(-50%);
+    background-image: repeating-linear-gradient(90deg, var(--yellow) 0 9px, transparent 9px 18px);
+    opacity: 0.65;
+  }
+  .t-road-v::after {
+    content: "";
+    position: absolute;
+    left: 50%; top: 0; width: 2px; height: 100%;
+    transform: translateX(-50%);
+    background-image: repeating-linear-gradient(180deg, var(--yellow) 0 9px, transparent 9px 18px);
+    opacity: 0.65;
+  }
+  
+  /* Faixa de pedestre no meio do cruzamento */
+  .t-crosswalk {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 46px; height: 46px;
+    transform: translate(-50%, -50%);
+    background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0 4px, transparent 4px 9px);
+    border-radius: 4px;
+  }
+  
+  /* Semáforos mini nas 4 esquinas, alternando em par */
+  .t-mini-light {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #2a2f3d;
+    z-index: 2;
+  }
+  .light-n { top: calc(50% - 40px); left: calc(50% + 16px); animation: tMiniGreen 2.4s steps(1) infinite; }
+  .light-s { top: calc(50% + 30px); left: calc(50% - 26px); animation: tMiniGreen 2.4s steps(1) infinite; }
+  .light-e { top: calc(50% + 16px); left: calc(50% - 40px); animation: tMiniRed   2.4s steps(1) infinite; }
+  .light-w { top: calc(50% - 26px); left: calc(50% + 30px); animation: tMiniRed   2.4s steps(1) infinite; }
+  
+  @keyframes tMiniGreen {
+    0%, 45%   { background: #1e8449; box-shadow: 0 0 8px #27ae60; }
+    50%, 100% { background: #2a2f3d; box-shadow: none; }
+  }
+  @keyframes tMiniRed {
+    0%, 45%   { background: #c0392b; box-shadow: 0 0 8px #e74c3c; }
+    50%, 100% { background: #2a2f3d; box-shadow: none; }
+  }
+  
+  /* Carros nas faixas corretas (sem cruzar a linha central) */
+  .t-car {
+    position: absolute;
+    font-size: 20px;
+    z-index: 3;
+    filter: drop-shadow(0 0 4px rgba(0,0,0,0.6));
+  }
+  .t-car.c-e { top: calc(50% + 11px); left: -14%;  transform: translateY(-50%);            animation: tMoveE 3.4s linear infinite; }
+  .t-car.c-w { top: calc(50% - 11px); right: -14%; transform: translateY(-50%) scaleX(-1); animation: tMoveW 3.4s linear infinite 0.85s; }
+  .t-car.c-s { left: calc(50% + 11px); top: -16%;    transform: translateX(-50%) rotate(90deg);  animation: tMoveS 3.4s linear infinite 1.7s; }
+  .t-car.c-n { left: calc(50% - 11px); bottom: -16%; transform: translateX(-50%) rotate(-90deg); animation: tMoveN 3.4s linear infinite 2.55s; }
+  
+  @keyframes tMoveE { 0% { left: -14%; } 100% { left: 114%; } }
+  @keyframes tMoveW { 0% { right: -14%; } 100% { right: 114%; } }
+  @keyframes tMoveS { 0% { top: -16%; } 100% { top: 116%; } }
+  @keyframes tMoveN { 0% { bottom: -16%; } 100% { bottom: 116%; } }
+  
+  .t-flag {
+    margin-top: 10px;
+    font-family: var(--ff-title);
+    font-size: 13px;
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(39,174,96,0.1);
+    border: 1px solid rgba(39,174,96,0.3);
+    padding: 6px 14px;
+    border-radius: 50px;
+  }
+  
+  /* ---- Slide 2: Como jogar — semáforo alternando + clique ---- */
+  .t-sem-demo {
+    display: flex;
+    align-items: center;
+    gap: 34px;
+  }
+  .t-sem-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 9px;
+    background: #111726;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    position: relative;
+  }
+  .t-sem-target .t-sem-box.via-a::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 14px;
+    border: 2px solid var(--blue);
+    opacity: 0;
+    animation: tRingTap 2.4s ease infinite;
+  }
+  @keyframes tRingTap {
+    0%, 34%   { opacity: 0; transform: scale(1); }
+    40%       { opacity: 0.9; transform: scale(0.92); }
+    55%       { opacity: 0; transform: scale(1.15); }
+    100%      { opacity: 0; transform: scale(1); }
+  }
+  .t-sem-lamp {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #2a2f3d;
+  }
+  
+  /* Semáforo A (recebe o clique): começa VERDE aberto.
+     No instante do toque (40%), fecha (vermelho) e assim permanece. */
+  .t-sem-box.via-a .t-sem-lamp.top    { animation: tLampOnThenOff  2.4s steps(1) infinite; } /* verde */
+  .t-sem-box.via-a .t-sem-lamp.bottom { animation: tLampOffThenOn  2.4s steps(1) infinite; } /* vermelho */
+  
+  /* Semáforo B: começa VERMELHO fechado.
+     No mesmo instante, abre (verde) porque a via cruzada foi liberada. */
+  .t-sem-box.via-b .t-sem-lamp.top    { animation: tLampOffThenOn  2.4s steps(1) infinite; } /* verde */
+  .t-sem-box.via-b .t-sem-lamp.bottom { animation: tLampOnThenOff  2.4s steps(1) infinite; } /* vermelho */
+  
+  .t-sem-box.via-a .t-sem-lamp.top,
+  .t-sem-box.via-b .t-sem-lamp.top {
+    --cor-lamp: var(--green);
+  }
+  .t-sem-box.via-a .t-sem-lamp.bottom,
+  .t-sem-box.via-b .t-sem-lamp.bottom {
+    --cor-lamp: var(--red);
+  }
+  
+  @keyframes tLampOnThenOff {
+    0%, 39%   { background: var(--cor-lamp); box-shadow: 0 0 14px var(--cor-lamp); }
+    40%, 100% { background: #2a2f3d; box-shadow: none; }
+  }
+  @keyframes tLampOffThenOn {
+    0%, 39%   { background: #2a2f3d; box-shadow: none; }
+    40%, 100% { background: var(--cor-lamp); box-shadow: 0 0 14px var(--cor-lamp); }
+  }
+  
+  .t-sem-target {
+    position: relative;
+  }
+  .t-sem-vs {
+    font-family: var(--ff-title);
+    font-size: 16px;
+    color: var(--muted);
+  }
+  
+  .t-cursor {
+    position: absolute;
+    right: -14px;
+    bottom: -10px;
+    font-size: 30px;
+    transform-origin: 70% 20%;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+    animation: tCursorClick 2.4s ease infinite;
+  }
+  @keyframes tCursorClick {
+    0%, 34%  { transform: translate(6px, 6px) rotate(-18deg) scale(1); }
+    40%      { transform: translate(-2px, -2px) rotate(-18deg) scale(0.88); }
+    46%, 100%{ transform: translate(6px, 6px) rotate(-18deg) scale(1); }
+  }
+  
+  /* ---- Slide 3: Riscos — colisão e congestionamento ---- */
+  .t-riscos {
+    display: flex;
+    gap: 18px;
+    width: 100%;
+    justify-content: center;
+  }
+  .t-risco-card {
+    flex: 1;
+    max-width: 190px;
+    background: rgba(231,76,60,0.06);
+    border: 1px solid rgba(231,76,60,0.25);
+    border-radius: 12px;
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .t-risco-card.congest {
+    background: rgba(240,165,0,0.06);
+    border-color: rgba(240,165,0,0.3);
+  }
+  .t-risco-icon {
+    font-size: 30px;
+    animation: tPulseBoom 1.6s ease infinite;
+  }
+  .congest .t-risco-icon { animation: tShakeQueue 1.4s ease infinite; }
+  
+  @keyframes tPulseBoom {
+    0%, 60%, 100% { transform: scale(1); }
+    75%           { transform: scale(1.25); }
+  }
+  @keyframes tShakeQueue {
+    0%, 100% { transform: translateX(0); }
+    25%      { transform: translateX(-2px); }
+    75%      { transform: translateX(2px); }
+  }
+  .t-risco-title {
+    font-family: var(--ff-title);
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    color: var(--text);
+  }
+  .t-risco-sub {
+    font-family: var(--ff-body);
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+  .t-risco-tag {
+    font-family: var(--ff-title);
+    font-size: 11px;
+    color: var(--red);
+    animation: tBlink 1.2s steps(1) infinite;
+  }
+  .congest .t-risco-tag { color: var(--yellow); }
+  @keyframes tBlink { 50% { opacity: 0.25; } }
+  
+  /* ---- Slide 4: HUD + Pontuação ---- */
+  .t-visual-hud {
+    flex-direction: column;
+    gap: 14px;
+    height: auto;
+  }
+  .t-hud-demo {
+    display: flex;
+    gap: 10px;
+    background: #0c1120;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-family: var(--ff-title);
+    font-size: 13px;
+    color: var(--text);
+  }
+  .t-hud-item { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 70px; }
+  .t-hud-item span.lbl { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+  .t-hud-item span.val { font-size: 15px; }
+  .t-hud-item.tempo span.val { color: var(--yellow); animation: tCountBlink 1s steps(1) infinite; }
+  @keyframes tCountBlink { 50% { opacity: 0.6; } }
+  
+  .t-desc-small {
+    font-size: 13px;
+    max-width: 360px;
+  }
+  
+  .t-score-tiers {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    width: 100%;
+  }
+  .t-score-card {
+    flex: 1;
+    max-width: 170px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 10px;
+    border-radius: 12px;
+    background: rgba(39,174,96,0.07);
+    border: 1px solid rgba(39,174,96,0.28);
+  }
+  .t-score-card.slow {
+    background: rgba(122,133,168,0.08);
+    border-color: var(--border);
+  }
+  .t-score-icon { font-size: 24px; }
+  .t-score-title {
+    font-family: var(--ff-body);
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--text);
+  }
+  .t-score-pts {
+    font-family: var(--ff-title);
+    font-size: 15px;
+    color: var(--green);
+  }
+  .t-score-card.slow .t-score-pts { color: var(--muted); }
+  .t-score-stars { font-size: 12px; letter-spacing: 1px; }
+  .t-score-card.slow .t-score-stars { opacity: 0.4; }
+  
+  /* ── Navegação ── */
+  .tutorial-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .tutorial-nav .btn {
+    flex: 1;
+    padding: 12px 0;
+    font-size: 13px;
+  }
+  #t-btn-prev.hidden { visibility: hidden; }
+  
+  @media (max-width: 480px) {
+    .tutorial-wrap { padding: 26px 18px 20px; }
+    .t-riscos { flex-direction: column; align-items: center; }
+    .t-risco-card { max-width: 260px; width: 100%; }
+    .t-hud-demo { flex-wrap: wrap; justify-content: center; }
+    .t-score-tiers { flex-direction: column; align-items: center; }
+    .t-score-card { max-width: 260px; width: 100%; }
+  }
