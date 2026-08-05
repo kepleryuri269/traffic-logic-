@@ -120,3 +120,221 @@
   background: #b91c1c;
   transform: scale(1.03);
 }
+/* ── HUD DO JOGO ── */
+
+#hud {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+
+  padding: 12px 16px;
+  border-radius: 10px;
+
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 18px;
+  font-weight: bold;
+
+  backdrop-filter: blur(4px);
+}
+
+#hud div {
+  margin: 6px 0;
+}
+.game-message {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-message-box {
+  background: #1a1a2e;
+  color: white;
+  padding: 35px;
+  border-radius: 18px;
+  text-align: center;
+  border: 2px solid #ff4d4d;
+  box-shadow: 0 0 30px rgba(255,0,0,0.5);
+  font-family: 'Rajdhani', sans-serif;
+}
+
+.game-message-box h2 {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  color: #ff4d4d;
+}
+
+.game-message-box button {
+  margin-top: 20px;
+  padding: 10px 25px;
+  border: none;
+  border-radius: 8px;
+  background: #ff4d4d;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* ── Fase concluída ── */
+.fase-concluida-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.fase-concluida-box {
+  background: linear-gradient(160deg, #0e1428 0%, #1a1a2e 100%);
+  border: 1px solid rgba(91,110,245,0.35);
+  border-radius: 24px;
+  padding: 44px 40px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 0 60px rgba(91,110,245,0.2), 0 20px 60px rgba(0,0,0,0.6);
+  animation: slideUp 0.35s cubic-bezier(.22,1,.36,1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.fc-icon {
+  font-size: 3.5rem;
+  animation: troféuPulse 0.6s ease 0.2s both;
+}
+
+@keyframes troféuPulse {
+  0%   { transform: scale(0.5); opacity: 0; }
+  70%  { transform: scale(1.15); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+.fc-titulo {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.5rem;
+  color: #fff;
+  letter-spacing: 2px;
+  text-shadow: 0 0 20px rgba(140,170,255,0.7);
+}
+
+.fc-estrelas {
+  display: flex;
+  gap: 10px;
+  font-size: 2rem;
+}
+
+.fc-estrela {
+  filter: grayscale(1) opacity(0.3);
+  transition: all 0.3s;
+}
+
+.fc-estrela.ativa {
+  filter: none;
+  animation: estrelaPop 0.4s ease both;
+}
+
+.fc-estrela:nth-child(1) { animation-delay: 0.3s; }
+.fc-estrela:nth-child(2) { animation-delay: 0.5s; }
+.fc-estrela:nth-child(3) { animation-delay: 0.7s; }
+
+@keyframes estrelaPop {
+  0%   { transform: scale(0); }
+  70%  { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.fc-pontos {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  background: rgba(91,110,245,0.12);
+  border: 1px solid rgba(91,110,245,0.3);
+  border-radius: 50px;
+  padding: 10px 28px;
+}
+
+.fc-pontos-valor {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #ffd700;
+  text-shadow: 0 0 16px rgba(255,215,0,0.6);
+}
+
+.fc-pontos-label {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1rem;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.fc-desc {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.95rem;
+  color: rgba(200,210,255,0.7);
+  line-height: 1.5;
+}
+
+.fc-fim {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem;
+  color: #ffd700;
+  letter-spacing: 1px;
+}
+
+.fc-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.fc-btn {
+  width: 100% !important;
+  padding: 14px !important;
+  font-size: 0.8rem !important;
+}
+
+/* ── Aviso de congestionamento ── */
+.game-aviso {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  background: rgba(220, 38, 38, 0.92);
+  color: #fff;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  padding: 10px 24px;
+  border-radius: 50px;
+  box-shadow: 0 4px 20px rgba(220,38,38,0.5);
+  animation: avisoEntrar 0.3s ease, avisoSair 0.4s ease 2.1s forwards;
+  pointer-events: none;
+}
+
+@keyframes avisoEntrar {
+  from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes avisoSair {
+  from { opacity: 1; }
+  to   { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+}
