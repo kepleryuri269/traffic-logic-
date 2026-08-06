@@ -40,6 +40,43 @@ const CONFIG_NIVEL = {
 const BASE_W = 1672;
 const BASE_H = 941;
 
+// Distância mínima "genérica" (fallback) entre carros da mesma via.
+// A distância real usada no jogo é calculada dinamicamente por par de
+// carros através de distanciaMinimaEntre() — ver mais abaixo. Isso é
+// necessário porque os sprites virados para EAST/WEST mostram o carro
+// de perfil (bem mais "compridos") enquanto os sprites NORTH/SOUTH
+// mostram o carro de cima (mais "curtos"), então uma distância fixa
+// deixava as vias horizontais com os carros colados/sobrepostos.
+const DIST_FILA_VIA = 65;
+
+// Comprimento visível (em px, na escala de desenho tamanho=96) de cada
+// tipo de veículo, separado por orientação horizontal (EAST/WEST) e
+// vertical (NORTH/SOUTH) — medido a partir da área não-transparente
+// de cada sprite.
+const COMPRIMENTO_VEICULO = {
+  AMBULANCE:       { horizontal: 71, vertical: 66 },
+  BROWN_CIVIC:      { horizontal: 54, vertical: 46 },
+  TAXI:             { horizontal: 80, vertical: 64 },
+  WHITE_HATCHBACK:  { horizontal: 76, vertical: 62 }
+};
+
+// Espaço extra (px) entre o para-choque de um carro e o do carro da frente,
+// além do comprimento dos dois veículos — evita que fiquem "colados".
+const MARGEM_ENTRE_CARROS = 16;
+
+// Retorna o comprimento do carro na direção em que ele está viajando.
+function comprimentoCarro(carro) {
+  const tabela = COMPRIMENTO_VEICULO[carro.tipoVeiculo] || COMPRIMENTO_VEICULO.AMBULANCE;
+  const horizontal = carro.direcao === 'EAST' || carro.direcao === 'WEST';
+  return horizontal ? tabela.horizontal : tabela.vertical;
+}
+
+// Distância mínima (centro-a-centro) entre dois carros específicos,
+// considerando o comprimento real de cada um na sua direção de viagem.
+function distanciaMinimaEntre(carroA, carroB) {
+  return comprimentoCarro(carroA) / 2 + comprimentoCarro(carroB) / 2 + MARGEM_ENTRE_CARROS;
+}
+
 // ══════════════════════════════════════════════
 //  ROTAS (coordenadas do mapa original 1672×941)
 // ══════════════════════════════════════════════
@@ -294,9 +331,44 @@ if (!rotasDisponiveis) {
   const ids = window._tiposVeiculosIds || ['AMBULANCE'];
   const tipoVeiculo = ids[Math.floor(Math.random() * ids.length)];
 
+  // Direção unitária da via (do ponto de spawn em direção à pista)
+  const dirX   = waypoints[1].x - waypoints[0].x;
+  const dirY   = waypoints[1].y - waypoints[0].y;
+  const dirLen = Math.hypot(dirX, dirY) || 1;
+  const ux = dirX / dirLen;
+  const uy = dirY / dirLen;
+
+  // Se já existe um carro muito perto do ponto de spawn nessa via (fila
+  // grande, congestionada), nasce um pouco mais "atrás" na mesma via —
+  // nunca em cima do carro que já está lá. Continua nascendo normalmente,
+  // só ajusta a posição inicial pra nunca sobrepor a fila.
+  const carroNovo = {
+    direcao:    rotaBase.direcao,
+    tipoVeiculo
+  };
+
+  let menorDist = Infinity;
+  let distMinimaNecessaria = DIST_FILA_VIA;
+  carros.forEach(c => {
+    if (!c.ativo || c.direcao !== rotaBase.direcao) return;
+    const d = Math.hypot(c.x - waypoints[0].x, c.y - waypoints[0].y);
+    if (d < menorDist) {
+      menorDist = d;
+      distMinimaNecessaria = distanciaMinimaEntre(carroNovo, c);
+    }
+  });
+
+  let spawnX = waypoints[0].x;
+  let spawnY = waypoints[0].y;
+  if (menorDist < distMinimaNecessaria) {
+    const falta = distMinimaNecessaria - menorDist;
+    spawnX -= ux * falta;
+    spawnY -= uy * falta;
+  }
+
   carros.push({
-    x: waypoints[0].x,
-    y: waypoints[0].y,
+    x: spawnX,
+    y: spawnY,
     direcao:    rotaBase.direcao,
     waypoints,
     wpIndex:    1,
@@ -315,7 +387,7 @@ function atualizarCarros(dt) {
   const scaleX = gameCanvas.width  / BASE_W;
   const scaleY = gameCanvas.height / BASE_H;
   const STOP_DIST  = 50 * Math.min(scaleX, scaleY);
-  const DIST_FILA  = 65; // distância mínima entre carros da mesma via (reduzida para ficarem mais próximos)
+  const DIST_FILA  = DIST_FILA_VIA; // distância mínima entre carros da mesma via
 
   carros.forEach(carro => {
     if (!carro.ativo) return;
@@ -329,7 +401,12 @@ function atualizarCarros(dt) {
       const dsy   = stopY - carro.y;
       const dist  = Math.sqrt(dsx*dsx + dsy*dsy);
 
-      if (dist < STOP_DIST) {
+      // Carros maiores têm a frente mais longe do centro do que carros
+      // pequenos (o sprite é mais "comprido" na direção de viagem), então
+      // o limite de frenagem soma metade do comprimento do veículo — sem
+      // isso, carros grandes cruzavam um pouco a faixa antes de parar.
+      const frenteCarro = comprimentoCarro(carro) / 2;
+      if (dist < STOP_DIST + frenteCarro) {
         carro.parado = true;
         return;
       }
@@ -347,6 +424,7 @@ function atualizarCarros(dt) {
     // (baseado na distância real, não apenas em outro.parado, para que a
     // fila nunca "coma" o carro da frente mesmo com 3+ carros acumulados)
     let distCarroFrente = Infinity;
+    let distMinimaFrente = DIST_FILA;
     for (const outro of carros) {
       if (outro === carro || !outro.ativo || outro.direcao !== carro.direcao) continue;
 
@@ -365,11 +443,12 @@ function atualizarCarros(dt) {
 
       // Guarda sempre a MENOR distância entre os carros à frente
       if (dot > 0 && dist < distCarroFrente) {
-        distCarroFrente = dist;
+        distCarroFrente  = dist;
+        distMinimaFrente = distanciaMinimaEntre(carro, outro);
       }
     }
 
-    if (distCarroFrente <= DIST_FILA) {
+    if (distCarroFrente <= distMinimaFrente) {
       carro.parado = true;
     }
 
@@ -388,7 +467,7 @@ function atualizarCarros(dt) {
     // mínima do carro da frente — evita "pular" para dentro dele em
     // frames de passo maior (ex: fila toda liberando no sinal verde)
     if (distCarroFrente !== Infinity) {
-      const passoMax = distCarroFrente - DIST_FILA;
+      const passoMax = distCarroFrente - distMinimaFrente;
       passo = Math.min(passo, Math.max(0, passoMax));
     }
 
