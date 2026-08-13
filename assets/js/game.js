@@ -386,7 +386,7 @@ if (!rotasDisponiveis) {
 function atualizarCarros(dt) {
   const scaleX = gameCanvas.width  / BASE_W;
   const scaleY = gameCanvas.height / BASE_H;
-  const STOP_DIST  = 50 * Math.min(scaleX, scaleY);
+  const STOP_DIST  = 35 * Math.min(scaleX, scaleY);
   const DIST_FILA  = DIST_FILA_VIA; // distância mínima entre carros da mesma via
 
   carros.forEach(carro => {
@@ -401,21 +401,25 @@ function atualizarCarros(dt) {
       const dsy   = stopY - carro.y;
       const dist  = Math.sqrt(dsx*dsx + dsy*dsy);
 
+      // Verifica se o carro já passou da faixa de parada (usando o sentido
+      // total do percurso). Se já passou, o sinal fechar não deve mais
+      // pará-lo — senão ele trava "do lado de trás" do ponto de parada.
+      const alvoFinal = carro.waypoints[carro.waypoints.length - 1];
+      const totalDX   = alvoFinal.x - carro.waypoints[0].x;
+      const totalDY   = alvoFinal.y - carro.waypoints[0].y;
+      const jaPassouFaixa = (dsx * totalDX + dsy * totalDY) < 0;
+
       // Carros maiores têm a frente mais longe do centro do que carros
       // pequenos (o sprite é mais "comprido" na direção de viagem), então
       // o limite de frenagem soma metade do comprimento do veículo — sem
       // isso, carros grandes cruzavam um pouco a faixa antes de parar.
       const frenteCarro = comprimentoCarro(carro) / 2;
-      if (dist < STOP_DIST + frenteCarro) {
+      if (!jaPassouFaixa && dist < STOP_DIST + frenteCarro) {
         carro.parado = true;
         return;
       }
 
-      const alvoFinal = carro.waypoints[carro.waypoints.length - 1];
-      const totalDX   = alvoFinal.x - carro.waypoints[0].x;
-      const totalDY   = alvoFinal.y - carro.waypoints[0].y;
-      const dot = dsx * totalDX + dsy * totalDY;
-      carro.parado = dot >= 0 ? false : false;
+      carro.parado = false;
     } else {
       carro.parado = false;
     }
