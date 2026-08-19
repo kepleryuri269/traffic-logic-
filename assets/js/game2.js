@@ -16,7 +16,7 @@ let imgCarregadas = 0;
 let totalImgs     = 0;
 let carrosPassaram = 0;
 let pontos = 0;
-let tempoRestante = TEMPO_FASE[nivel] || 300; // 5 minutos
+let tempoRestante = 300;
 let timerFase = null;
 let jogoEncerrado = false;
 let explosoes = [];
@@ -165,7 +165,7 @@ function iniciarJogo(nivel, restaurando = false) {
   screen.style.position   = 'relative';
   screen.style.overflow   = 'hidden';
   screen.style.backgroundImage = nivel === 2
-    ? "url('mapa2.png')"
+    ? "url('assets/img/mapas/mapa2.png')"
     : `url('assets/img/mapas/mapa${nivel}.png')`;
   screen.style.backgroundSize     = 'cover';
   screen.style.backgroundPosition = 'center';
@@ -191,7 +191,7 @@ const hud = document.createElement("div");
 hud.id = "hud";
 
 hud.innerHTML = `
-  <div id="tempo">Tempo: 05:00</div>
+  <div id="tempo">Tempo: ${Math.floor((TEMPO_FASE[nivel] || 300) / 60).toString().padStart(2, "0")}:00</div>
   <div id="meta">Carros: 0/${META_FASE[nivel]}</div>
   <div id="fase">Fase: ${nivel}</div>
 `;
