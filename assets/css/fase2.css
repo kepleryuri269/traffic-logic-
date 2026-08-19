@@ -1,0 +1,35 @@
+
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;font-family:Arial,Helvetica,sans-serif;background:#0b1118;color:#fff}
+body{overflow:hidden}
+.screen{display:none;position:fixed;inset:0;min-height:100vh;overflow:auto}
+.screen.active{display:block}
+.bg{position:absolute;inset:0;background:radial-gradient(circle at 50% 30%,#1d3040,#091018 70%);z-index:-1}
+.menu-wrap,.fases-wrap,.sobre-wrap,.config-wrap,.tutorial-wrap{width:min(1100px,92vw);margin:0 auto;padding:7vh 0}
+.title{margin:0;font-size:clamp(34px,5vw,68px);letter-spacing:2px}
+.subtitle{color:#b6c5d1;letter-spacing:2px}
+.logo-row,.sobre-header,.config-header{display:flex;align-items:center;gap:18px}
+.semaforo{width:34px;padding:7px 6px;background:#202830;border-radius:12px;display:grid;gap:6px}
+.s-light{width:20px;height:20px;border-radius:50%;display:block}
+.s-light.red,.dot.red{background:#e74c3c}.s-light.yellow,.dot.yellow{background:#f0a500}.s-light.green,.dot.green{background:#27ae60}
+.btn{border:0;border-radius:12px;padding:14px 22px;font-weight:800;letter-spacing:1px;cursor:pointer;color:white}
+.btn-play{background:#27ae60}.btn-outline{background:#18232d;border:1px solid #52616d}
+.btn-group{display:flex;flex-wrap:wrap;gap:14px;margin-top:28px}
+.fases-grid{display:grid;gap:16px;margin:35px 0}
+.card-fase{width:100%;display:flex;align-items:stretch;text-align:left;padding:0;border:1px solid #33414d;border-radius:18px;background:#16212a;color:white;cursor:pointer;overflow:hidden}
+.card-fase:hover{transform:translateY(-2px);border-color:#7d9aaa}
+.cf-side-bar{width:8px;background:#f0a500}.facil-card .cf-side-bar{background:#27ae60}.dificil-card .cf-side-bar{background:#e74c3c}
+.cf-icon{font-size:34px;padding:22px 16px}.cf-body{padding:20px;flex:1}.cf-top{display:flex;justify-content:space-between}.cf-tag{font-size:12px;font-weight:800}.medio{color:#f0a500}.facil{color:#27ae60}.dificil{color:#e74c3c}.cf-title{margin:5px 0}.cf-desc{color:#b8c5cf}.cf-stats{display:flex;gap:20px;flex-wrap:wrap;color:#c8d2da;font-size:13px}.cf-arrow{font-size:40px;align-self:center;padding:20px;color:#f0a500}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.card,.config-section{background:#121c24;border:1px solid #31414e;border-radius:15px;padding:18px;margin:12px 0}.card{display:flex;gap:12px}.card-icon{font-size:28px}.tip-box{margin-top:18px;padding:16px;border-left:4px solid #f0a500;background:#18242d}
+.config-section-label{font-weight:800;margin-bottom:12px}.config-slider-row{display:flex;gap:12px;align-items:center}.cfg-slider{flex:1}.config-toggles{display:grid;gap:10px}.cfg-toggle{display:flex;justify-content:space-between;align-items:center;background:#17222b;border:1px solid #33414d;color:white;border-radius:12px;padding:14px;cursor:pointer}.cfg-toggle-left{display:flex;gap:10px;text-align:left}.cfg-toggle-pill{width:38px;height:20px;border-radius:20px;background:#4a5964}.cfg-toggle.ativo .cfg-toggle-pill{background:#27ae60}
+.tutorial-slides{min-height:420px}.t-slide{display:none}.t-slide.active{display:block}.t-visual{margin:20px 0;padding:25px;border-radius:16px;background:#101a22}.t-map{height:230px;position:relative;background:#303b42;border-radius:12px;overflow:hidden}.t-road{position:absolute;background:#4b555a}.t-road-h{left:0;right:0;top:42%;height:25%}.t-road-v{top:0;bottom:0;left:43%;width:18%}.t-car{position:absolute;font-size:28px}.c-e{left:15%;top:46%}.c-w{right:15%;top:46%}.c-s{left:46%;top:15%}.c-n{left:46%;bottom:15%}.t-riscos{display:grid;grid-template-columns:1fr 1fr;gap:14px}.t-risco-card{padding:20px;border:1px solid #4b5965;border-radius:12px;display:grid;gap:7px}.tutorial-nav{display:flex;justify-content:space-between}.hidden{visibility:hidden}
+#screen-game{background:#17202a center/cover no-repeat;overflow:hidden}
+#game-canvas{touch-action:none}
+#hud{position:absolute;z-index:20;top:16px;left:50%;transform:translateX(-50%);display:flex;gap:10px;background:rgba(8,14,20,.86);border:1px solid #52616d;border-radius:12px;padding:10px 15px;font-weight:800;white-space:nowrap}
+.btn-voltar-jogo{position:absolute;z-index:30;top:16px;left:16px;border:1px solid #647481;background:rgba(8,14,20,.88);color:#fff;border-radius:10px;padding:10px 14px;cursor:pointer}
+.modal-overlay,.game-message,.fase-concluida-overlay{position:fixed;z-index:100;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-box,.game-message-box,.fase-concluida-box{background:#14212b;border:1px solid #5b6b77;border-radius:18px;padding:28px;max-width:520px;text-align:center;box-shadow:0 18px 60px #000}
+.modal-btns,.fc-btns{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:18px}
+.game-aviso{position:absolute;z-index:50;top:80px;left:50%;transform:translateX(-50%);background:#9b6a00;color:white;padding:12px 20px;border-radius:10px;font-weight:800}
+#brilho-overlay{pointer-events:none;position:fixed;inset:0;background:#000;z-index:9999;opacity:0}
+@media(max-width:700px){#hud{font-size:11px;gap:6px;padding:8px}.cf-stats{gap:8px}.t-riscos{grid-template-columns:1fr}}
