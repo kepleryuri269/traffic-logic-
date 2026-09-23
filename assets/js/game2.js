@@ -1,10 +1,4 @@
 "use strict";
-
-// ══════════════════════════════════════════════
-//  TRAFFIC LOGIC — game.js
-//  Etapa 2: Semáforos desenhados no canvas
-// ══════════════════════════════════════════════
-
 let gameLoop    = null;
 let carros      = [];
 let semaforos   = [];
@@ -20,7 +14,7 @@ let tempoRestante = 300;
 let timerFase = null;
 let jogoEncerrado = false;
 let explosoes = [];
-let congestionamentos = {}; // { 'EAST': count, 'WEST': count, ... }
+let congestionamentos = {}; 
 const crashAudio = new Audio('assets/audio/crash.mp3');
 window.crashAudio = crashAudio;
 crashAudio.volume = window.cfgVolume ?? 1;
