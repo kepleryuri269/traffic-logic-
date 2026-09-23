@@ -4,7 +4,10 @@
 //  TUTORIAL — Traffic Logic
 // ══════════════════════════════════════════════
 
-const TOTAL_PASSOS_TUTORIAL = 4;
+function totalPassosTutorial() {
+  const slides = document.querySelectorAll("#screen-tutorial .t-slide");
+  return slides.length || 1;
+}
 let tutorialPasso = 0;
 let tutorialOrigem = null;   // 'menu' | 'fase'
 let tutorialNivelPendente = null;
@@ -46,7 +49,7 @@ function recusarTutorial() {
 }
 
 function tutorialNext() {
-  if (tutorialPasso >= TOTAL_PASSOS_TUTORIAL - 1) {
+  if (tutorialPasso >= totalPassosTutorial() - 1) {
     finalizarTutorial();
     return;
   }
@@ -92,7 +95,7 @@ function atualizarPassoTutorial() {
   const btnNext = document.getElementById("t-btn-next");
   if (btnPrev) btnPrev.classList.toggle("hidden", tutorialPasso === 0);
   if (btnNext) {
-    const ultimo = tutorialPasso === TOTAL_PASSOS_TUTORIAL - 1;
+    const ultimo = tutorialPasso === totalPassosTutorial() - 1;
     btnNext.textContent = ultimo
       ? (tutorialOrigem === "fase" ? "COMEÇAR A JOGAR →" : "ENTENDI ✓")
       : "PRÓXIMO ›";

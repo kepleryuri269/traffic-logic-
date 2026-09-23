@@ -1,1035 +1,116 @@
 "use strict";
-let gameLoop    = null;
-let carros      = [];
-let semaforos   = [];
-let nivelAtual  = 1;
-let gameCanvas  = null;
-let ctx         = null;
-let carImagens  = {};
-let imgCarregadas = 0;
-let totalImgs     = 0;
-let carrosPassaram = 0;
-let pontos = 0;
-let tempoRestante = 300;
-let timerFase = null;
-let jogoEncerrado = false;
-let explosoes = [];
-let congestionamentos = {}; 
-const crashAudio = new Audio('assets/audio/crash.mp3');
-window.crashAudio = crashAudio;
-crashAudio.volume = window.cfgVolume ?? 1;
 
-const META_FASE = {
-  1: 30,
-  2: 30,
-  3: 30
+// ══════════════════════════════════════════════
+//  DADOS DA FASE 2 — mapa2.png
+//  Carrega DEPOIS do game.js (que define os
+//  containers ROTAS_MAPA, SEMAFOROS_MAPA, etc.)
+//
+//  O mapa2.png (1671×941) é um bairro com UMA rua
+//  vertical cortando DUAS ruas horizontais, ou seja,
+//  são DOIS cruzamentos na mesma fase:
+//
+//        rua vertical  x 795 – 878  (faixa amarela no x≈836)
+//        rua de cima   y 228 – 289  (cruzamento 1)
+//        rua de baixo  y 726 – 787  (cruzamento 2)
+//
+//  Cada faixa tem ~30px (ruas horizontais) e ~41px
+//  (rua vertical), bem mais estreitas que na fase 1,
+//  por isso o carro é redimensionado automaticamente
+//  pela "larguraFaixa" para caber dentro da faixa.
+//
+//  Todas as coordenadas foram medidas em pixel
+//  direto na imagem mapa2.png.
+// ══════════════════════════════════════════════
+
+// Meta de carros e dificuldade da fase (um pouco mais difícil que a fase 1)
+META_FASE[2] = 35;
+
+CONFIG_NIVEL[2] = {
+  intervaloSpawn: 1800,   // ms entre carros
+  velocidade:     1.8,    // px/frame
+  maxCarros:      16,     // carros simultâneos na tela
+  tempo:          420,    // 7 minutos (igual ao card da fase)
+
+  // Largura de UMA faixa em px do mapa. O jogo calcula sozinho a escala
+  // do carro para ele ocupar ~90% da faixa (ver calcularEscalaSprite).
+  larguraFaixa:   { horizontal: 30, vertical: 41 },
+  ocupacaoFaixa:  0.92,
+
+  escalaPedestre: 0.6,    // pedestre proporcional à calçada (~30px)
+  escalaSemaforo: 0.7,    // semáforo menor, cabe na esquina
+  distParada:     4       // carro para colado na faixa de pedestre
 };
 
-const TEMPO_FASE = {
-  1: 300,
-  2: 420,
-  3: 600
-};
-
-const CONFIG_NIVEL = {
-  1: { intervaloSpawn: 3000, velocidade: 1.5, maxCarros: 12 },
-  2: { intervaloSpawn: 2000, velocidade: 2.2, maxCarros: 18 },
-  3: { intervaloSpawn: 1200, velocidade: 3.0, maxCarros: 26 }
-};
-
-const BASE_W = 1672;
-const BASE_H = 941;
-
-// Distância mínima "genérica" (fallback) entre carros da mesma via.
-// A distância real usada no jogo é calculada dinamicamente por par de
-// carros através de distanciaMinimaEntre() — ver mais abaixo. Isso é
-// necessário porque os sprites virados para EAST/WEST mostram o carro
-// de perfil (bem mais "compridos") enquanto os sprites NORTH/SOUTH
-// mostram o carro de cima (mais "curtos"), então uma distância fixa
-// deixava as vias horizontais com os carros colados/sobrepostos.
-const DIST_FILA_VIA = 65;
-
-// Comprimento visível (em px, na escala de desenho tamanho=96) de cada
-// tipo de veículo, separado por orientação horizontal (EAST/WEST) e
-// vertical (NORTH/SOUTH) — medido a partir da área não-transparente
-// de cada sprite.
-const COMPRIMENTO_VEICULO = {
-  AMBULANCE:       { horizontal: 71, vertical: 66 },
-  BROWN_CIVIC:      { horizontal: 54, vertical: 46 },
-  TAXI:             { horizontal: 80, vertical: 64 },
-  WHITE_HATCHBACK:  { horizontal: 76, vertical: 62 }
-};
-
-// Espaço extra (px) entre o para-choque de um carro e o do carro da frente,
-// além do comprimento dos dois veículos — evita que fiquem "colados".
-const MARGEM_ENTRE_CARROS = 16;
-
-// Retorna o comprimento do carro na direção em que ele está viajando.
-function comprimentoCarro(carro) {
-  const tabela = COMPRIMENTO_VEICULO[carro.tipoVeiculo] || COMPRIMENTO_VEICULO.AMBULANCE;
-  const horizontal = carro.direcao === 'EAST' || carro.direcao === 'WEST';
-  return horizontal ? tabela.horizontal : tabela.vertical;
-}
-
-// Distância mínima (centro-a-centro) entre dois carros específicos,
-// considerando o comprimento real de cada um na sua direção de viagem.
-function distanciaMinimaEntre(carroA, carroB) {
-  return comprimentoCarro(carroA) / 2 + comprimentoCarro(carroB) / 2 + MARGEM_ENTRE_CARROS;
-}
-
-// ══════════════════════════════════════════════
-//  ROTAS (coordenadas do mapa original 1672×941)
-// ══════════════════════════════════════════════
-const ROTAS_MAPA = {
-  1: [
-    { direcao: 'EAST',  waypoints: [{ x: 0,    y: 525 }, { x: 1670, y: 525 }] },
-    { direcao: 'WEST',  waypoints: [{ x: 1668, y: 442 }, { x: 1,    y: 442 }] },
-    { direcao: 'SOUTH', waypoints: [{ x: 746,  y: 0   }, { x: 746,  y: 940 }] },
-    { direcao: 'NORTH', waypoints: [{ x: 919,  y: 940 }, { x: 919,  y: 1   }] }
-  ],
-
-  // Fase 2 — Trânsito Moderado.
-  // O mapa2 possui um grande cruzamento central. As quatro vias
-  // compartilham o cruzamento, aumentando o fluxo sem deixar o jogo
-  // impossível de controlar.
-  2: [
-    { direcao: 'EAST',  waypoints: [{ x: 0,    y: 252 }, { x: 1672, y: 252 }] },
-    { direcao: 'WEST',  waypoints: [{ x: 1672, y: 285 }, { x: 0,    y: 285 }] },
-    { direcao: 'SOUTH', waypoints: [{ x: 815,  y: 0   }, { x: 815,  y: 941 }] },
-    { direcao: 'NORTH', waypoints: [{ x: 848,  y: 941 }, { x: 848,  y: 0 }] }
-  ]
-};
-
-// ══════════════════════════════════════════════
-//  SEMÁFOROS — posição no mapa original
-//  Cada semáforo controla uma direção de tráfego
-//  estado: 'green' | 'red'
-//  Os 4 semáforos ficam nos 4 cantos do cruzamento
-// ══════════════════════════════════════════════
-const SEMAFOROS_MAPA = {
-  1: [
-    { id: 'SEM_SOUTH', controla: 'SOUTH', grupo: 1, x: 630, y: 275, stopX: 746, stopY: 330, estado: 'green' },
-    { id: 'SEM_NORTH', controla: 'NORTH', grupo: 1, x: 1030, y: 620, stopX: 919, stopY: 650, estado: 'green' },
-    { id: 'SEM_EAST', controla: 'EAST', grupo: 2, x: 550, y: 565, stopX: 528, stopY: 480, estado: 'red' },
-    { id: 'SEM_WEST', controla: 'WEST', grupo: 2, x: 1120, y: 355, stopX: 1115, stopY: 442, estado: 'red' }
-  ],
-
-  // Fase 2 — dois grupos: vertical ou horizontal.
-  2: [
-    { id: 'F2_SOUTH', controla: 'SOUTH', grupo: 1, x: 760, y: 175, stopX: 815, stopY: 205, estado: 'green' },
-    { id: 'F2_NORTH', controla: 'NORTH', grupo: 1, x: 900, y: 330, stopX: 848, stopY: 305, estado: 'green' },
-    { id: 'F2_EAST',  controla: 'EAST',  grupo: 2, x: 710, y: 215, stopX: 775, stopY: 252, estado: 'red' },
-    { id: 'F2_WEST',  controla: 'WEST',  grupo: 2, x: 970, y: 315, stopX: 895, stopY: 285, estado: 'red' }
-  ]
-};
-
-// ══════════════════════════════════════════════
-//  INICIALIZAR JOGO
-// ══════════════════════════════════════════════
-function iniciarJogo(nivel, restaurando = false) {
-  nivelAtual = nivel;
-  sessionStorage.setItem('nivelAtual', nivel);
-  showScreen('screen-game');
-
-  pararJogo();
-
-  carros = [];
-  semaforos = [];
-  carrosPassaram = 0;
-  pontos = 0;
-  tempoRestante = TEMPO_FASE[nivel] || 300;
-  jogoEncerrado = false;
-  explosoes = [];
-  congestionamentos = {};
-
-  if (timerFase) {
-    clearInterval(timerFase);
-    timerFase = null;
-    function reiniciarFase() {
-  console.log("CLICOU NO BOTÃO");
-
-  const msg = document.querySelector(".game-message");
-  if (msg) msg.remove();
-
-  iniciarJogo(nivelAtual);
-}
-  }
-
-  const screen = document.getElementById('screen-game');
-  screen.style.position   = 'relative';
-  screen.style.overflow   = 'hidden';
-  screen.style.backgroundImage = nivel === 2
-    ? "url('assets/img/mapas/mapa2.png')"
-    : `url('assets/img/mapas/mapa${nivel}.png')`;
-  screen.style.backgroundSize     = 'cover';
-  screen.style.backgroundPosition = 'center';
-  screen.style.backgroundRepeat   = 'no-repeat';
-
-  const canvasAntigo = document.getElementById('game-canvas');
-  if (canvasAntigo) canvasAntigo.remove();
-
-  gameCanvas = document.createElement('canvas');
-  gameCanvas.id = 'game-canvas';
-  gameCanvas.style.cssText = `
-    position: absolute; top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: 10; cursor: pointer;
-  `;
-  screen.appendChild(gameCanvas);
-  ctx = gameCanvas.getContext('2d');
-  redimensionarCanvas();
-  const hudAntigo = document.getElementById("hud");
-if (hudAntigo) hudAntigo.remove();
-
-const hud = document.createElement("div");
-hud.id = "hud";
-
-hud.innerHTML = `
-  <div id="tempo">Tempo: ${Math.floor((TEMPO_FASE[nivel] || 300) / 60).toString().padStart(2, "0")}:00</div>
-  <div id="meta">Carros: 0/${META_FASE[nivel]}</div>
-  <div id="fase">Fase: ${nivel}</div>
-`;
-
-screen.appendChild(hud);
-
-  // Inicializa semáforos
- const defsem = SEMAFOROS_MAPA[nivel] || [];
-semaforos = defsem.map(s => ({ ...s }));
-
-  // Clique para alternar semáforo
-  gameCanvas.addEventListener('click', onClickCanvas);
-
-  // Fase 2 usa veículos desenhados pelo próprio Canvas, então não depende
-  // dos sprites externos que não acompanham este pacote.
-  const tiposVeiculos = [
-    { id: 'AMBULANCE' },
-    { id: 'BROWN_CIVIC' },
-    { id: 'TAXI' },
-    { id: 'WHITE_HATCHBACK' }
-  ];
-
-  window._tiposVeiculosIds = tiposVeiculos.map(t => t.id);
-
-  if (nivel === 2) {
-    carImagens = {};
-    iniciarLoop(nivel);
-  } else {
-    // Mantém compatibilidade com os sprites das demais fases.
-    const sprites = {
-      AMBULANCE: {
-        EAST: 'assets/img/veiculos/AMBULANCE_CLEAN_EAST_011.png',
-        WEST: 'assets/img/veiculos/AMBULANCE_CLEAN_WEST_011.png',
-        NORTH: 'assets/img/veiculos/AMBULANCE_CLEAN_NORTH_011.png',
-        SOUTH: 'assets/img/veiculos/AMBULANCE_CLEAN_SOUTH_011.png'
-      },
-      BROWN_CIVIC: {
-        EAST: 'assets/img/veiculos/Brown_CIVIC_CLEAN_EAST_011.png',
-        WEST: 'assets/img/veiculos/Brown_CIVIC_CLEAN_WEST_011.png',
-        NORTH: 'assets/img/veiculos/Brown_CIVIC_CLEAN_NORTH_011.png',
-        SOUTH: 'assets/img/veiculos/Brown_CIVIC_CLEAN_SOUTH_011.png'
-      },
-      TAXI: {
-        EAST: 'assets/img/veiculos/TAXI_CLEAN_EAST_011.png',
-        WEST: 'assets/img/veiculos/TAXI_CLEAN_WEST_011.png',
-        NORTH: 'assets/img/veiculos/TAXI_CLEAN_NORTH_011.png',
-        SOUTH: 'assets/img/veiculos/TAXI_CLEAN_SOUTH_011.png'
-      },
-      WHITE_HATCHBACK: {
-        EAST: 'assets/img/veiculos/White_HatchBack_CLEAN_EAST_011.png',
-        WEST: 'assets/img/veiculos/White_HatchBack_CLEAN_WEST_011.png',
-        NORTH: 'assets/img/veiculos/White_HatchBack_CLEAN_NORTH_011.png',
-        SOUTH: 'assets/img/veiculos/White_HatchBack_CLEAN_SOUTH_011.png'
-      }
-    };
-
-    carImagens = {};
-    const lista = Object.entries(sprites);
-    totalImgs = lista.length * 4;
-    imgCarregadas = 0;
-    let loopIniciado = false;
-
-    lista.forEach(([tipo, dirs]) => {
-      carImagens[tipo] = {};
-      Object.entries(dirs).forEach(([dir, caminho]) => {
-        const img = new Image();
-        const done = () => {
-          imgCarregadas++;
-          if (imgCarregadas === totalImgs && !loopIniciado) {
-            loopIniciado = true;
-            iniciarLoop(nivel);
-          }
-        };
-        img.onload = done;
-        img.onerror = done;
-        img.src = caminho;
-        carImagens[tipo][dir] = img;
-      });
-    });
-  }
-
-  // Guarda lista de IDs para sortear no spawn
-  window._tiposVeiculosIds = tiposVeiculos.map(t => t.id);
-}
-
-// ══════════════════════════════════════════════
-//  CLIQUE NO CANVAS — alterna semáforo clicado
-// ══════════════════════════════════════════════
-function onClickCanvas(e) {
-  const rect = gameCanvas.getBoundingClientRect();
-  const mx   = (e.clientX - rect.left) / (rect.width  / BASE_W);
-  const my   = (e.clientY - rect.top)  / (rect.height / BASE_H);
-  const RAIO = 60;
-
-  // Verifica se clicou em algum semáforo
-  const clicado = semaforos.find(s => {
-    const dx = mx - s.x, dy = my - s.y;
-    return Math.sqrt(dx*dx + dy*dy) < RAIO;
-  });
-
-  if (!clicado) return;
-
-  // Alterna grupos: o grupo clicado vai pra verde, o outro pra vermelho
-  const grupoAtivo = clicado.grupo === 1 ? 1 : 2;
-  semaforos.forEach(s => {
-    s.estado = s.grupo === grupoAtivo ? 'green' : 'red';
-  });
-}
-
-// ══════════════════════════════════════════════
-//  LOOP PRINCIPAL
-// ══════════════════════════════════════════════
-function iniciarLoop(nivel) {
-  timerFase = setInterval(() => {
-  tempoRestante--;
-
-if (tempoRestante <= 0) {
-    clearInterval(timerFase);
-
-    pararJogo();
-
-    mostrarMensagemDerrota("O tempo acabou.");
-
-    return;
-}
-}, 1000);
-  redimensionarCanvas();
-  window.addEventListener('resize', redimensionarCanvas);
-
-  const cfg = CONFIG_NIVEL[nivel] || CONFIG_NIVEL[1];
-
-  let spawnTimer = setInterval(() => {
-    const ativos = carros.filter(c => c.ativo).length;
-    if (ativos < cfg.maxCarros) spawnCarro(nivel, cfg.velocidade);
-  }, cfg.intervaloSpawn);
-  spawnCarro(nivel, cfg.velocidade);
-
-  let lastTime = 0;
-  function loop(ts) {
-    const dt = Math.min((ts - lastTime) / 16.67, 3);
-    lastTime = ts;
-    atualizarCarros(dt);
-    renderizar();
-    gameLoop = requestAnimationFrame(loop);
-  }
-  gameLoop = requestAnimationFrame(loop);
-  gameCanvas._spawnTimer = spawnTimer;
-}
-
-// ══════════════════════════════════════════════
-//  SPAWN
-// ══════════════════════════════════════════════
-function spawnCarro(nivel, velocidade) {
-  const rotasDisponiveis = ROTAS_MAPA[nivel];
-
-if (!rotasDisponiveis) {
-  console.error("Rotas não configuradas para a fase:", nivel);
-  return;
-}
-  const rotaBase = rotasDisponiveis[Math.floor(Math.random() * rotasDisponiveis.length)];
-  const scaleX   = gameCanvas.width  / BASE_W;
-  const scaleY   = gameCanvas.height / BASE_H;
-  const waypoints = rotaBase.waypoints.map(w => ({ x: w.x * scaleX, y: w.y * scaleY }));
-
-  const ids = window._tiposVeiculosIds || ['AMBULANCE'];
-  const tipoVeiculo = ids[Math.floor(Math.random() * ids.length)];
-
-  // Direção unitária da via (do ponto de spawn em direção à pista)
-  const dirX   = waypoints[1].x - waypoints[0].x;
-  const dirY   = waypoints[1].y - waypoints[0].y;
-  const dirLen = Math.hypot(dirX, dirY) || 1;
-  const ux = dirX / dirLen;
-  const uy = dirY / dirLen;
-
-  // Se já existe um carro muito perto do ponto de spawn nessa via (fila
-  // grande, congestionada), nasce um pouco mais "atrás" na mesma via —
-  // nunca em cima do carro que já está lá. Continua nascendo normalmente,
-  // só ajusta a posição inicial pra nunca sobrepor a fila.
-  const carroNovo = {
-    direcao:    rotaBase.direcao,
-    tipoVeiculo
-  };
-
-  let menorDist = Infinity;
-  let distMinimaNecessaria = DIST_FILA_VIA;
-  carros.forEach(c => {
-    if (!c.ativo || c.direcao !== rotaBase.direcao) return;
-    const d = Math.hypot(c.x - waypoints[0].x, c.y - waypoints[0].y);
-    if (d < menorDist) {
-      menorDist = d;
-      distMinimaNecessaria = distanciaMinimaEntre(carroNovo, c);
-    }
-  });
-
-  let spawnX = waypoints[0].x;
-  let spawnY = waypoints[0].y;
-  if (menorDist < distMinimaNecessaria) {
-    const falta = distMinimaNecessaria - menorDist;
-    spawnX -= ux * falta;
-    spawnY -= uy * falta;
-  }
-
-  carros.push({
-    x: spawnX,
-    y: spawnY,
-    direcao:    rotaBase.direcao,
-    waypoints,
-    wpIndex:    1,
-    velocidade: velocidade,
-    tamanho:    96,
-    ativo:      true,
-    parado:     false,
-    tipoVeiculo
-  });
-}
-
-// ══════════════════════════════════════════════
-//  ATUALIZAR CARROS — respeita semáforo vermelho
-// ══════════════════════════════════════════════
-function atualizarCarros(dt) {
-  const scaleX = gameCanvas.width  / BASE_W;
-  const scaleY = gameCanvas.height / BASE_H;
-  const STOP_DIST  = 35 * Math.min(scaleX, scaleY);
-  const DIST_FILA  = DIST_FILA_VIA; // distância mínima entre carros da mesma via
-
-  carros.forEach(carro => {
-    if (!carro.ativo) return;
-
-    // ── 1. Semáforo vermelho ──
-    const sem = semaforos.find(s => s.controla === carro.direcao);
-    if (sem && sem.estado === 'red') {
-      const stopX = (sem.stopX ?? sem.x) * scaleX;
-      const stopY = (sem.stopY ?? sem.y) * scaleY;
-      const dsx   = stopX - carro.x;
-      const dsy   = stopY - carro.y;
-      const dist  = Math.sqrt(dsx*dsx + dsy*dsy);
-
-      // Verifica se o carro já passou da faixa de parada (usando o sentido
-      // total do percurso). Se já passou, o sinal fechar não deve mais
-      // pará-lo — senão ele trava "do lado de trás" do ponto de parada.
-      const alvoFinal = carro.waypoints[carro.waypoints.length - 1];
-      const totalDX   = alvoFinal.x - carro.waypoints[0].x;
-      const totalDY   = alvoFinal.y - carro.waypoints[0].y;
-      const jaPassouFaixa = (dsx * totalDX + dsy * totalDY) < 0;
-
-      // Carros maiores têm a frente mais longe do centro do que carros
-      // pequenos (o sprite é mais "comprido" na direção de viagem), então
-      // o limite de frenagem soma metade do comprimento do veículo — sem
-      // isso, carros grandes cruzavam um pouco a faixa antes de parar.
-      const frenteCarro = comprimentoCarro(carro) / 2;
-      if (!jaPassouFaixa && dist < STOP_DIST + frenteCarro) {
-        carro.parado = true;
-        return;
-      }
-
-      carro.parado = false;
-    } else {
-      carro.parado = false;
-    }
-
-    // ── 2. Respeitar distância mínima do carro à frente na mesma via ──
-    // (baseado na distância real, não apenas em outro.parado, para que a
-    // fila nunca "coma" o carro da frente mesmo com 3+ carros acumulados)
-    let distCarroFrente = Infinity;
-    let distMinimaFrente = DIST_FILA;
-    for (const outro of carros) {
-      if (outro === carro || !outro.ativo || outro.direcao !== carro.direcao) continue;
-
-      const dx   = outro.x - carro.x;
-      const dy   = outro.y - carro.y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      if (dist <= 1) continue;
-
-      // Verifica se "outro" está à frente (mais avançado na rota)
-      // usando produto escalar com a direção de movimento do carro atual
-      const alvoAtual = carro.waypoints[carro.wpIndex];
-      if (!alvoAtual) continue;
-      const dirX = alvoAtual.x - carro.x;
-      const dirY = alvoAtual.y - carro.y;
-      const dot  = dx * dirX + dy * dirY;
-
-      // Guarda sempre a MENOR distância entre os carros à frente
-      if (dot > 0 && dist < distCarroFrente) {
-        distCarroFrente  = dist;
-        distMinimaFrente = distanciaMinimaEntre(carro, outro);
-      }
-    }
-
-    if (distCarroFrente <= distMinimaFrente) {
-      carro.parado = true;
-    }
-
-    if (carro.parado) return;
-
-    // ── 3. Mover ──
-    const alvo = carro.waypoints[carro.wpIndex];
-    if (!alvo) { carro.ativo = false; return; }
-
-    const dx    = alvo.x - carro.x;
-    const dy    = alvo.y - carro.y;
-    const dist  = Math.sqrt(dx*dx + dy*dy);
-    let passo = carro.velocidade * dt;
-
-    // Nunca avança mais do que o necessário para manter a distância
-    // mínima do carro da frente — evita "pular" para dentro dele em
-    // frames de passo maior (ex: fila toda liberando no sinal verde)
-    if (distCarroFrente !== Infinity) {
-      const passoMax = distCarroFrente - distMinimaFrente;
-      passo = Math.min(passo, Math.max(0, passoMax));
-    }
-
-    if (passo <= 0) return;
-
-    if (dist <= passo) {
-      carro.x = alvo.x;
-      carro.y = alvo.y;
-      carro.wpIndex++;
-      if (carro.wpIndex >= carro.waypoints.length) {
-        carro.ativo = false;
-        carrosPassaram++;
-        if (carrosPassaram >= META_FASE[nivelAtual] && !jogoEncerrado) {
-          jogoEncerrado = true;
-          finalizarFase();
-        }
-      }
-    } else {
-      carro.x += (dx / dist) * passo;
-      carro.y += (dy / dist) * passo;
-    }
-  });
-
-  // Resetar flag congestionado para carros que não têm mais ninguém próximo na mesma via
-  carros.forEach(carro => {
-    if (!carro.congestionado) return;
-    const temVizinho = carros.some(outro =>
-      outro !== carro &&
-      outro.ativo &&
-      outro.direcao === carro.direcao &&
-      Math.hypot(outro.x - carro.x, outro.y - carro.y) < DIST_FILA
-    );
-    if (!temVizinho) carro.congestionado = false;
-  });
-
-  verificarColisoes();
-  carros = carros.filter(c => c.ativo);
-}
-function verificarColisoes() {
-  if (jogoEncerrado) return;
-
-  const DIST_COLISAO          = 45;
-  const DIST_CONGESTIONAMENTO = 90;
-
-  for (let i = 0; i < carros.length; i++) {
-    for (let j = i + 1; j < carros.length; j++) {
-      const a = carros[i];
-      const b = carros[j];
-
-      const dx   = a.x - b.x;
-      const dy   = a.y - b.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      const mesmaVia = a.direcao === b.direcao;
-
-      // Vias diferentes muito próximos → colisão real
-      if (!mesmaVia && dist < DIST_COLISAO) {
-        dispararColisao(a, b);
-        return;
-      }
-
-      // Mesma via em fila → apenas marca como congestionado (sem colisão)
-      if (mesmaVia && dist < DIST_CONGESTIONAMENTO) {
-        a.congestionado = true;
-        b.congestionado = true;
-      } else if (mesmaVia && dist >= DIST_CONGESTIONAMENTO) {
-        a.congestionado = false;
-        b.congestionado = false;
-      }
-    }
-  }
-
-  // ── Verificar se alguma via tem 3+ carros congestionados simultaneamente ──
-  const vias = ['EAST', 'WEST', 'NORTH', 'SOUTH'];
-  vias.forEach(via => {
-    // Conta carros parados OU marcados como congestionados na mesma via
-    const qtd = carros.filter(c => c.ativo && (c.congestionado || c.parado) && c.direcao === via).length;
-    if (qtd >= 3) {
-      if (!congestionamentos[via + '_avisado']) {
-        congestionamentos[via + '_avisado'] = true;
-        congestionamentos[via + '_tick']    = 0;
-        tempoRestante = Math.max(0, tempoRestante - 30);
-        mostrarAviso('-30s — Congestionamento!');
-      }
-    }
-    // Só reseta o aviso depois que a fila se desfez completamente por alguns frames
-    if (qtd < 3 && congestionamentos[via + '_avisado']) {
-      congestionamentos[via + '_tick'] = (congestionamentos[via + '_tick'] || 0) + 1;
-      if (congestionamentos[via + '_tick'] > 60) { // ~1 segundo de graça
-        congestionamentos[via + '_avisado'] = false;
-        congestionamentos[via + '_tick']    = 0;
-      }
-    } else if (qtd >= 3) {
-      congestionamentos[via + '_tick'] = 0;
-    }
-  });
-}
-
-function dispararColisao(a, b) {
-  jogoEncerrado = true;
-
-  crashAudio.currentTime = 0;
-  crashAudio.play().catch(() => {});
-
-  explosoes.push({
-    x: (a.x + b.x) / 2,
-    y: (a.y + b.y) / 2,
-    frame: 0,
-    maxFrames: 40,
-    particulas: Array.from({ length: 18 }, () => ({
-      angulo: Math.random() * Math.PI * 2,
-      vel: 2 + Math.random() * 5,
-      raio: 4 + Math.random() * 6,
-      alpha: 1,
-      cor: ['#ff4500','#ff8c00','#ffd700','#fff'][Math.floor(Math.random() * 4)]
-    }))
-  });
-
-  setTimeout(() => {
-    pararJogo();
-    mostrarMensagemDerrota("Os carros colidiram.");
-  }, 400);
-}
-
-
-// ══════════════════════════════════════════════
-//  RENDERIZAR
-// ══════════════════════════════════════════════
-const DEBUG_ROTAS = false;
-
-function renderizar() {
-  ctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
-
-  atualizarHUD();
-
-  if (DEBUG_ROTAS) desenharDebugRotas();
-
-  desenharSemaforos();
-  desenharCarros();
-  desenharExplosoes();
-}
-
-// ── Semáforos ────────────────────────────────
-function desenharSemaforos() {
-  const scaleX = gameCanvas.width  / BASE_W;
-  const scaleY = gameCanvas.height / BASE_H;
-  const scale  = Math.min(scaleX, scaleY);
-
-  semaforos.forEach(sem => {
-    const cx = sem.x * scaleX;
-    const cy = sem.y * scaleY;
-    desenharSemaforo(ctx, cx, cy, scale, sem.estado, sem.controla);
-  });
-}
-
-// ── Explosões ────────────────────────────────
-function desenharExplosoes() {
-  explosoes = explosoes.filter(exp => exp.frame < exp.maxFrames);
-
-  explosoes.forEach(exp => {
-    const prog = exp.frame / exp.maxFrames;
-
-    // Flash central
-    if (exp.frame < 10) {
-      const flashAlpha = (1 - exp.frame / 10) * 0.8;
-      const flashRaio  = 60 * (exp.frame / 10);
-      const grad = ctx.createRadialGradient(exp.x, exp.y, 0, exp.x, exp.y, flashRaio);
-      grad.addColorStop(0,   `rgba(255,255,200,${flashAlpha})`);
-      grad.addColorStop(0.4, `rgba(255,140,0,${flashAlpha * 0.7})`);
-      grad.addColorStop(1,   'rgba(255,60,0,0)');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(exp.x, exp.y, flashRaio, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Partículas
-    exp.particulas.forEach(p => {
-      const px = exp.x + Math.cos(p.angulo) * p.vel * exp.frame;
-      const py = exp.y + Math.sin(p.angulo) * p.vel * exp.frame;
-      const alpha = Math.max(0, 1 - prog * 1.3);
-      const raioAtual = p.raio * (1 - prog * 0.5);
-
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = p.cor;
-      ctx.beginPath();
-      ctx.arc(px, py, raioAtual, 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    // Fumaça
-    if (exp.frame > 10) {
-      const fumaçaAlpha = Math.max(0, 0.4 - prog * 0.5);
-      const fumaçaRaio  = 30 + exp.frame * 1.2;
-      ctx.globalAlpha = fumaçaAlpha;
-      ctx.fillStyle = '#555';
-      ctx.beginPath();
-      ctx.arc(exp.x, exp.y, fumaçaRaio, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.globalAlpha = 1;
-    exp.frame++;
-  });
-}
-
-function desenharSemaforo(ctx, cx, cy, scale, estado, label) {
-  const W  = 26 * scale;   // largura da caixa
-  const H  = 48 * scale;   // altura da caixa (só 2 luzes)
-  const R  = 10 * scale;   // raio das luzes
-  const rx = 6  * scale;   // raio dos cantos da caixa
-  const posteH = 18 * scale;
-  const posteW =  4 * scale;
-
-  // ── Poste ──
-  ctx.fillStyle = '#2a2a2a';
-  ctx.beginPath();
-  ctx.roundRect(cx - posteW/2, cy + H/2, posteW, posteH, 2);
-  ctx.fill();
-
-  // ── Base do poste ──
-  ctx.fillStyle = '#1a1a1a';
-  ctx.beginPath();
-  ctx.ellipse(cx, cy + H/2 + posteH, posteW * 2, posteW * 0.8, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // ── Caixa — sombra ──
-  ctx.shadowColor = 'rgba(0,0,0,0.5)';
-  ctx.shadowBlur  = 8 * scale;
-  ctx.shadowOffsetY = 3 * scale;
-
-  // Caixa principal
-  ctx.fillStyle = '#1c1c1c';
-  roundRect(ctx, cx - W/2, cy - H/2, W, H, rx);
-  ctx.fill();
-  ctx.shadowColor = 'transparent';
-  ctx.shadowBlur  = 0;
-  ctx.shadowOffsetY = 0;
-
-  // Borda metálica
-  ctx.strokeStyle = '#444';
-  ctx.lineWidth   = 1.5 * scale;
-  roundRect(ctx, cx - W/2, cy - H/2, W, H, rx);
-  ctx.stroke();
-
-  // Highlight lateral (efeito 3D)
-  const grad = ctx.createLinearGradient(cx - W/2, cy, cx + W/2, cy);
-  grad.addColorStop(0,   'rgba(255,255,255,0.08)');
-  grad.addColorStop(0.4, 'rgba(255,255,255,0.02)');
-  grad.addColorStop(1,   'rgba(0,0,0,0.1)');
-  ctx.fillStyle = grad;
-  roundRect(ctx, cx - W/2, cy - H/2, W, H, rx);
-  ctx.fill();
-
-  // ── 2 luzes: vermelho no topo, verde embaixo ──
-  const posY  = [cy - H/2 + H * 0.28, cy + H/2 - H * 0.28];
-  const cores  = ['#e74c3c', '#27ae60'];
-  // vermelho aceso quando red, verde aceso quando green — nunca os dois juntos
-  const ativas = estado === 'red' ? [true, false] : [false, true];
-
-  posY.forEach((ly, i) => {
-    // Alvéolo (fundo escuro da lâmpada)
-    ctx.fillStyle = '#111';
-    ctx.beginPath();
-    ctx.arc(cx, ly, R * 1.1, 0, Math.PI * 2);
-    ctx.fill();
-
-    if (ativas[i]) {
-      // Brilho externo (glow)
-      const glow = ctx.createRadialGradient(cx, ly, 0, cx, ly, R * 3);
-      glow.addColorStop(0,   cores[i] + 'aa');
-      glow.addColorStop(0.4, cores[i] + '44');
-      glow.addColorStop(1,   'transparent');
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(cx, ly, R * 3, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Lâmpada acesa
-      const lampGrad = ctx.createRadialGradient(cx - R*0.3, ly - R*0.3, 0, cx, ly, R);
-      lampGrad.addColorStop(0,   '#fff');
-      lampGrad.addColorStop(0.3, cores[i]);
-      lampGrad.addColorStop(1,   shadeColor(cores[i], -40));
-      ctx.fillStyle = lampGrad;
-    } else {
-      // Lâmpada apagada
-      ctx.fillStyle = shadeColor(cores[i], -70);
-    }
-    ctx.beginPath();
-    ctx.arc(cx, ly, R, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Reflexo na lâmpada acesa
-    if (ativas[i]) {
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
-      ctx.beginPath();
-      ctx.ellipse(cx - R*0.25, ly - R*0.3, R*0.3, R*0.2, -0.5, 0, Math.PI*2);
-      ctx.fill();
-    }
-  });
-
-  // ── Label da direção ──
-  const setas = { EAST:'→', WEST:'←', SOUTH:'↓', NORTH:'↑' };
-  ctx.fillStyle = estado === 'green' ? '#27ae60' : '#e74c3c';
-  ctx.font      = `bold ${11 * scale}px monospace`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.fillText(setas[label] || label, cx, cy + H/2 + posteH + 2*scale);
-}
-
-// ── Utilitário roundRect ──────────────────────
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y,     x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h,     x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y,         x + r, y);
-  ctx.closePath();
-}
-
-// ── Escurece/clareia uma cor hex ─────────────
-function shadeColor(hex, pct) {
-  const n = parseInt(hex.slice(1), 16);
-  const r = Math.max(0, Math.min(255, (n >> 16) + pct));
-  const g = Math.max(0, Math.min(255, ((n >> 8) & 0xff) + pct));
-  const b = Math.max(0, Math.min(255, (n & 0xff) + pct));
-  return `rgb(${r},${g},${b})`;
-}
-
-// ── Carros ───────────────────────────────────
-function desenharCarros() {
-  const cores = {
-    AMBULANCE: '#f5f5f5',
-    BROWN_CIVIC: '#8b5a3c',
-    TAXI: '#f2c230',
-    WHITE_HATCHBACK: '#d8dde3'
-  };
-
-  carros.forEach(carro => {
-    const tipo = carro.tipoVeiculo || 'BROWN_CIVIC';
-    const spriteSet = carImagens[tipo];
-    const img = spriteSet ? spriteSet[carro.direcao] : null;
-
-    // Se houver sprite, usa o sprite original.
-    if (img && img.complete && img.naturalWidth > 0) {
-      const half = carro.tamanho / 2;
-      ctx.drawImage(img, carro.x - half, carro.y - half, carro.tamanho, carro.tamanho);
-      return;
-    }
-
-    // Fase 2: carro vetorial desenhado em JavaScript/Canvas.
-    const horizontal = carro.direcao === 'EAST' || carro.direcao === 'WEST';
-    const comprimento = horizontal ? 48 : 30;
-    const largura = horizontal ? 30 : 48;
-    const x = carro.x - comprimento / 2;
-    const y = carro.y - largura / 2;
-
-    ctx.save();
-    ctx.translate(carro.x, carro.y);
-    if (carro.direcao === 'NORTH') ctx.rotate(-Math.PI / 2);
-    if (carro.direcao === 'SOUTH') ctx.rotate(Math.PI / 2);
-
-    ctx.fillStyle = cores[tipo] || '#5b6ef5';
-    roundRect(ctx, -comprimento / 2, -largura / 2, comprimento, largura, 7);
-    ctx.fill();
-
-    ctx.strokeStyle = '#20242a';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.fillStyle = '#9ed7ef';
-    roundRect(ctx, -comprimento * 0.22, -largura * 0.32, comprimento * 0.44, largura * 0.24, 3);
-    ctx.fill();
-
-    ctx.fillStyle = '#111';
-    ctx.beginPath();
-    ctx.arc(-comprimento * 0.28, largura * 0.43, 4, 0, Math.PI * 2);
-    ctx.arc(comprimento * 0.28, largura * 0.43, 4, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
-  });
-}
-
-// ── Debug rotas ──────────────────────────────
-function desenharDebugRotas() {
-  const scaleX = gameCanvas.width  / BASE_W;
-  const scaleY = gameCanvas.height / BASE_H;
-  const cores  = { EAST:'#00ff88', WEST:'#ff4466', SOUTH:'#44aaff', NORTH:'#ffcc00' };
-  (ROTAS_MAPA[nivelAtual] || ROTAS_MAPA[1]).forEach(rota => {
-    ctx.strokeStyle = cores[rota.direcao];
-    ctx.lineWidth   = 2;
-    ctx.setLineDash([8, 6]);
-    ctx.beginPath();
-    rota.waypoints.forEach((wp, i) => {
-      i === 0 ? ctx.moveTo(wp.x*scaleX, wp.y*scaleY)
-              : ctx.lineTo(wp.x*scaleX, wp.y*scaleY);
-    });
-    ctx.stroke();
-    ctx.setLineDash([]);
-  });
-}
-
-// ══════════════════════════════════════════════
-//  REDIMENSIONAR / PARAR
-// ══════════════════════════════════════════════
-function redimensionarCanvas() {
-  if (!gameCanvas) return;
-  const screen = document.getElementById('screen-game');
-  gameCanvas.width  = screen.clientWidth;
-  gameCanvas.height = screen.clientHeight;
-}
-
-function pararJogo() {
-  if (gameLoop) {
-    cancelAnimationFrame(gameLoop);
-    gameLoop = null;
-  }
-
-  if (timerFase) {
-    clearInterval(timerFase);
-    timerFase = null;
-  }
-
-  if (gameCanvas) {
-    if (gameCanvas._spawnTimer) {
-      clearInterval(gameCanvas._spawnTimer);
-      gameCanvas._spawnTimer = null;
-    }
-    gameCanvas.removeEventListener('click', onClickCanvas);
-  }
-
-  window.removeEventListener('resize', redimensionarCanvas);
-}
-// ══════════════════════════════════════════════
-//  MODAL / NAVEGAÇÃO
-// ══════════════════════════════════════════════
-function confirmarSairFase() { document.getElementById('modal-sair').style.display = 'flex'; }
-function fecharModal()        { document.getElementById('modal-sair').style.display = 'none'; }
-function confirmarSaida() {
-  pararJogo();
-  fecharModal();
-  sessionStorage.removeItem('nivelAtual');
-  showScreen('screen-fases');
-}
-function finalizarFase() {
-  pararJogo();
-
-  // Remove overlay anterior se existir
-  document.querySelectorAll('.fase-concluida-overlay').forEach(el => el.remove());
-
-  // Bônus para quem conclui a fase com pelo menos 3 minutos restantes.
-  const rapido = tempoRestante >= ((TEMPO_FASE[nivelAtual] || 300) - 180);
-  const pontosGanhos = rapido ? 25 : 15;
-  pontos += pontosGanhos;
-
-  const proximaFase = nivelAtual < 3 ? nivelAtual + 1 : null;
-
-  const overlay = document.createElement('div');
-  overlay.className = 'fase-concluida-overlay';
-
-  overlay.innerHTML = `
-    <div class="fase-concluida-box">
-      <div class="fc-icon">🏆</div>
-      <h2 class="fc-titulo">Fase ${nivelAtual} Concluída!</h2>
-      <div class="fc-estrelas">
-        <span class="fc-estrela ${rapido ? 'ativa' : ''}">⭐</span>
-        <span class="fc-estrela ${rapido ? 'ativa' : ''}">⭐</span>
-        <span class="fc-estrela ativa">⭐</span>
-      </div>
-      <div class="fc-pontos">
-        <span class="fc-pontos-valor">+${pontosGanhos}</span>
-        <span class="fc-pontos-label">pontos</span>
-      </div>
-      <p class="fc-desc">${rapido ? '🚀 Excelente controle! Bônus máximo!' : '✅ Fase concluída! Complete mais rápido para mais pontos.'}</p>
-      <div class="fc-btns">
-        ${proximaFase ? `<button class="btn btn-play fc-btn" onclick="this.closest('.fase-concluida-overlay').remove(); iniciarJogo(${proximaFase})">PRÓXIMA FASE →</button>` : '<p class="fc-fim">🎉 Você completou todas as fases!</p>'}
-        <button class="btn btn-outline fc-btn" onclick="this.closest('.fase-concluida-overlay').remove(); showScreen('screen-fases')">MENU DE FASES</button>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(overlay);
-}
-
-function atualizarHUD() {
-  const tempo = document.getElementById("tempo");
-  const meta = document.getElementById("meta");
-  const fase = document.getElementById("fase");
-
-  if (!tempo || !meta || !fase) return;
-
-  const minutos = Math.floor(tempoRestante / 60);
-  const segundos = tempoRestante % 60;
-
-  tempo.textContent = `Tempo: ${minutos}:${segundos.toString().padStart(2, "0")}`;
-  meta.textContent = `Carros: ${carrosPassaram}/${META_FASE[nivelAtual]}`;
-  fase.textContent = nivelAtual === 2
-    ? 'Fase: 2 — Trânsito Moderado'
-    : `Fase: ${nivelAtual}`;
-}
-
-function mostrarMensagemDerrota(texto) {
-  const antiga = document.querySelector(".game-message");
-  if (antiga) antiga.remove();
-
-  const msg = document.createElement("div");
-  msg.className = "game-message";
-
-  msg.innerHTML = `
-    <div class="game-message-box">
-      <h2>Você perdeu!</h2>
-      <p>${texto}</p>
-      <button id="btn-reiniciar" type="button">Tentar novamente</button>
-    </div>
-  `;
-
-  document.body.appendChild(msg);
-
-  const botao = document.getElementById("btn-reiniciar");
-
-  botao.onclick = function () {
-    msg.remove();
-    iniciarJogo(nivelAtual);
-  };
-}
-
-function mostrarAviso(texto) {
-  const aviso = document.createElement("div");
-  aviso.className = "game-aviso";
-  aviso.textContent = texto;
-  document.getElementById("screen-game").appendChild(aviso);
-  setTimeout(() => aviso.remove(), 2500);
-}
+// Retângulo do asfalto de CADA cruzamento (os pedestres usam isso para
+// saber quando estão em cima da rua e qual semáforo respeitar)
+AREA_VIA_MAPA[2] = [
+  { cruzamento: 1, xMin: 795, xMax: 878, yMin: 228, yMax: 289 },
+  { cruzamento: 2, xMin: 795, xMax: 878, yMin: 726, yMax: 787 }
+];
+
+// Rotas dos carros — cada rua horizontal tem sua própria via (id) para
+// que os carros de uma rua não formem fila com os da outra.
+// Mão de direção igual à fase 1: EAST na faixa de baixo, WEST na de cima,
+// SOUTH à esquerda da faixa amarela e NORTH à direita.
+ROTAS_MAPA[2] = [
+  // Rua de cima (cruzamento 1)
+  { id: 'EAST_1', direcao: 'EAST',  waypoints: [{ x: 0,    y: 274 }, { x: 1670, y: 274 }] },
+  { id: 'WEST_1', direcao: 'WEST',  waypoints: [{ x: 1670, y: 243 }, { x: 1,    y: 243 }] },
+  // Rua de baixo (cruzamento 2)
+  { id: 'EAST_2', direcao: 'EAST',  waypoints: [{ x: 0,    y: 772 }, { x: 1670, y: 772 }] },
+  { id: 'WEST_2', direcao: 'WEST',  waypoints: [{ x: 1670, y: 741 }, { x: 1,    y: 741 }] },
+  // Rua vertical — passa pelos DOIS cruzamentos
+  { id: 'SOUTH',  direcao: 'SOUTH', waypoints: [{ x: 815,  y: 0   }, { x: 815,  y: 940 }] },
+  { id: 'NORTH',  direcao: 'NORTH', waypoints: [{ x: 858,  y: 940 }, { x: 858,  y: 1   }] }
+];
+
+// Semáforos — 4 por cruzamento, nos cantos, como na fase 1.
+//   controla:   id da via (rota) que o semáforo controla
+//   direcao:    sentido dos carros (seta desenhada no semáforo)
+//   cruzamento: 1 = de cima, 2 = de baixo (teclas 1 e 2 do teclado)
+//   grupo:      1 = rua vertical, 2 = rua horizontal (abrem alternados)
+//   stopX/Y:    onde o para-choque para (borda da faixa de pedestre /
+//               linha de retenção branca)
+//   saidaX/Y:   fim do cruzamento. Com o sinal verde o carro só entra se
+//               houver espaço depois desse ponto — não trava o cruzamento
+//               quando a fila do outro cruzamento chega até ali.
+SEMAFOROS_MAPA[2] = [
+  // ── Cruzamento 1 (rua de cima) ──
+  { id: 'SEM_SOUTH_1', controla: 'SOUTH',  direcao: 'SOUTH', cruzamento: 1, grupo: 1,
+    x: 758, y: 170, stopX: 815, stopY: 198, saidaX: 815, saidaY: 324, estado: 'green' },
+  { id: 'SEM_NORTH_1', controla: 'NORTH',  direcao: 'NORTH', cruzamento: 1, grupo: 1,
+    x: 918, y: 328, stopX: 858, stopY: 324, saidaX: 858, saidaY: 198, estado: 'green' },
+  { id: 'SEM_EAST_1',  controla: 'EAST_1', direcao: 'EAST',  cruzamento: 1, grupo: 2,
+    x: 758, y: 328, stopX: 779, stopY: 274, saidaX: 893, saidaY: 274, estado: 'red' },
+  { id: 'SEM_WEST_1',  controla: 'WEST_1', direcao: 'WEST',  cruzamento: 1, grupo: 2,
+    x: 918, y: 170, stopX: 893, stopY: 243, saidaX: 779, saidaY: 243, estado: 'red' },
+
+  // ── Cruzamento 2 (rua de baixo) ──
+  { id: 'SEM_SOUTH_2', controla: 'SOUTH',  direcao: 'SOUTH', cruzamento: 2, grupo: 1,
+    x: 758, y: 667, stopX: 815, stopY: 697, saidaX: 815, saidaY: 820, estado: 'green' },
+  { id: 'SEM_NORTH_2', controla: 'NORTH',  direcao: 'NORTH', cruzamento: 2, grupo: 1,
+    x: 918, y: 826, stopX: 858, stopY: 820, saidaX: 858, saidaY: 697, estado: 'green' },
+  { id: 'SEM_EAST_2',  controla: 'EAST_2', direcao: 'EAST',  cruzamento: 2, grupo: 2,
+    x: 758, y: 826, stopX: 779, stopY: 772, saidaX: 893, saidaY: 772, estado: 'red' },
+  { id: 'SEM_WEST_2',  controla: 'WEST_2', direcao: 'WEST',  cruzamento: 2, grupo: 2,
+    x: 918, y: 667, stopX: 893, stopY: 741, saidaX: 779, saidaY: 741, estado: 'red' }
+];
+
+// Rotas de pedestre — o mapa 2 só tem faixa de pedestre atravessando a
+// rua VERTICAL (acima e abaixo de cada cruzamento), então os pedestres
+// andam pelas calçadas e atravessam por essas 4 faixas.
+//   calçadas horizontais: y 212, 314 (rua de cima) e 711, 806 (rua de baixo)
+//   calçadas verticais:   x 777 (esquerda) e 897 (direita)
+ROTAS_PEDESTRES_MAPA[2] = [
+  // calçadas horizontais, atravessando a rua vertical pela faixa
+  { waypoints: [{ x: -40,  y: 212 }, { x: 1710, y: 212 }] },
+  { waypoints: [{ x: 1710, y: 314 }, { x: -40,  y: 314 }] },
+  { waypoints: [{ x: -40,  y: 711 }, { x: 1710, y: 711 }] },
+  { waypoints: [{ x: 1710, y: 806 }, { x: -40,  y: 806 }] },
+  // rotas em "L": descem/sobem pela calçada da rua vertical e atravessam
+  { waypoints: [{ x: 777,  y: -40 }, { x: 777, y: 212 }, { x: 1710, y: 212 }] }, // norte → leste
+  { waypoints: [{ x: 897,  y: 980 }, { x: 897, y: 806 }, { x: -40,  y: 806 }] }, // sul → oeste
+  // entre os dois cruzamentos: calçada vertical + faixa do outro cruzamento
+  { waypoints: [{ x: -40,  y: 314 }, { x: 777, y: 314 }, { x: 777, y: 711 }, { x: 1710, y: 711 }] },
+  { waypoints: [{ x: 1710, y: 711 }, { x: 897, y: 711 }, { x: 897, y: 314 }, { x: -40,  y: 314 }] }
+];
